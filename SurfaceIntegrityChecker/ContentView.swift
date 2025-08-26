@@ -10,7 +10,10 @@ import SwiftUI
 struct ContentView: View {
     var body: some View {
 //            ARViewContainer().edgesIgnoringSafeArea(.all)
-        ARViewSingleFloorContainer().edgesIgnoringSafeArea(.all)
+        ZStack {
+            ARViewSingleFloorContainer().edgesIgnoringSafeArea(.all)
+            SegmentationViewContainer().edgesIgnoringSafeArea(.all)
+        }
 //        ARPointCloudViewContainer().edgesIgnoringSafeArea(.all)
     }
 }
