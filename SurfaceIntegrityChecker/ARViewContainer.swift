@@ -124,11 +124,13 @@ struct ARViewContainer: UIViewRepresentable {
         }
 
         func session(_ session: ARSession, didAdd anchors: [ARAnchor]) {
+//            print("Calling didAdd for \(anchors.count) anchors")
             handleMeshAnchors(anchors)
         }
 
         func session(_ session: ARSession, didUpdate anchors: [ARAnchor]) {
-            print("Number of anchors in arview: \(arView?.scene.anchors.count ?? 0)")
+//            print("Calling didUpdate for \(anchors.count) anchors")
+//            print("Number of anchors in arview: \(arView?.scene.anchors.count ?? 0)")
             handleMeshAnchors(anchors)
         }
         

@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		A309D47A2E5D849F008060CB /* Collections in Frameworks */ = {isa = PBXBuildFile; productRef = A309D4792E5D849F008060CB /* Collections */; };
+		A309D47C2E5D849F008060CB /* DequeModule in Frameworks */ = {isa = PBXBuildFile; productRef = A309D47B2E5D849F008060CB /* DequeModule */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		A38B63052E42D18B0004CA5D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +57,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A309D47A2E5D849F008060CB /* Collections in Frameworks */,
+				A309D47C2E5D849F008060CB /* DequeModule in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +119,8 @@
 			);
 			name = SurfaceIntegrityChecker;
 			packageProductDependencies = (
+				A309D4792E5D849F008060CB /* Collections */,
+				A309D47B2E5D849F008060CB /* DequeModule */,
 			);
 			productName = SurfaceIntegrityChecker;
 			productReference = A38B62F32E42D1890004CA5D /* SurfaceIntegrityChecker.app */;
@@ -195,6 +204,9 @@
 			);
 			mainGroup = A38B62EA2E42D1890004CA5D;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A309D4782E5D849F008060CB /* XCRemoteSwiftPackageReference "swift-collections" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A38B62F42E42D1890004CA5D /* Products */;
 			projectDirPath = "";
@@ -407,8 +419,7 @@
 				INFOPLIST_KEY_UIRequiredDeviceCapabilities = arkit;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
@@ -449,8 +460,7 @@
 				INFOPLIST_KEY_UIRequiredDeviceCapabilities = arkit;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
@@ -597,6 +607,30 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A309D4782E5D849F008060CB /* XCRemoteSwiftPackageReference "swift-collections" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-collections.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.2.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A309D4792E5D849F008060CB /* Collections */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A309D4782E5D849F008060CB /* XCRemoteSwiftPackageReference "swift-collections" */;
+			productName = Collections;
+		};
+		A309D47B2E5D849F008060CB /* DequeModule */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A309D4782E5D849F008060CB /* XCRemoteSwiftPackageReference "swift-collections" */;
+			productName = DequeModule;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A38B62EB2E42D1890004CA5D /* Project object */;
 }
