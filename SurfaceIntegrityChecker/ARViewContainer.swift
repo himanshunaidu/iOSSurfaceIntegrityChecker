@@ -12,6 +12,19 @@ import simd
 import CoreImage
 import Vision
 
+private struct MeshBundle {
+    let anchorEntity: AnchorEntity
+    var greenEntity: ModelEntity
+    var redEntity: ModelEntity
+    var lastUpdated: TimeInterval
+    var aabbCenter: SIMD3<Float> = .zero
+    var aabbExtents: SIMD3<Float> = .zero
+    
+    var faceCount: Int = 0
+    var meanNormal: SIMD3<Float> = .zero
+    var assignedColor: UIColor = .green
+}
+
 struct ARViewContainer: UIViewRepresentable {
     let arView = ARView(frame: .zero)
     let normalThreshold: Float = 15.0 // Degrees threshold for normal comparison
@@ -28,7 +41,7 @@ struct ARViewContainer: UIViewRepresentable {
         arView.session.run(config)
         arView.session.delegate = context.coordinator
         
-        arView.debugOptions.insert(.showSceneUnderstanding)
+//        arView.debugOptions.insert(.showSceneUnderstanding)
         arView.environment.sceneUnderstanding.options.insert(.occlusion)
         arView.debugOptions.insert(.showStatistics)
 
@@ -62,6 +75,15 @@ struct ARViewContainer: UIViewRepresentable {
         private weak var arView: ARView?
         var captureHighResFrames: Bool = true
         var imageSaver = ImageSaver()
+        
+        private var bundles: [UUID: MeshBundle] = [:]
+        private let updateInterval: TimeInterval = 0.033          // throttle mesh rebuilds
+        private let maxIdleAge: TimeInterval = 8.0               // GC old bundles
+        private let farCullDistance: Float = 7.0                 // meters
+        private var frameCounter: Int = 0
+//        private let decimateEvery: Int = 2                       // sample every Nth face
+        private var lastCleanup: TimeInterval = 0
+        private let cleanupInterval: TimeInterval = 2.0
         
         init(arView: ARView) {
             self.arView = arView
@@ -109,22 +131,52 @@ struct ARViewContainer: UIViewRepresentable {
             print("Number of anchors in arview: \(arView?.scene.anchors.count ?? 0)")
             handleMeshAnchors(anchors)
         }
+        
+        func generateRandomColor() -> UIColor {
+            let red = CGFloat(arc4random_uniform(256)) / 255.0
+            let green = CGFloat(arc4random_uniform(256)) / 255.0
+            let blue = CGFloat(arc4random_uniform(256)) / 255.0
+            return UIColor(red: red, green: green, blue: blue, alpha: 1.0)
+        }
 
         func handleMeshAnchors(_ anchors: [ARAnchor]) {
             let meshAnchors = anchors.compactMap { $0 as? ARMeshAnchor }
             for meshAnchor in meshAnchors {
                 // Next step: Analyze this mesh anchor for height anomalies
                 let geometry = meshAnchor.geometry
-
-                let transform = meshAnchor.transform
+                let id = meshAnchor.identifier
+                
+                if bundles[id] == nil {
+                    let anchorEntity = AnchorEntity(world: .zero)
+                    let greenEntity = ModelEntity()
+                    let redEntity = ModelEntity()
+                    
+                    greenEntity.name = "GreenMesh_\(id)"
+                    redEntity.name = "RedMesh_\(id)"
+                    
+                    anchorEntity.addChild(greenEntity)
+                    anchorEntity.addChild(redEntity)
+                    
+                    arView?.scene.addAnchor(anchorEntity)
+                    let assignedColor = generateRandomColor()
+                    
+                    bundles[id] = MeshBundle(anchorEntity: anchorEntity, greenEntity: greenEntity, redEntity: redEntity, lastUpdated: 0, assignedColor: assignedColor)
+                }
+                
+                // Throttle updates per anchor
+                if Date().timeIntervalSince1970 - bundles[id]!.lastUpdated < updateInterval { continue }
 
 //                _ = geometry.vertices
                 let faces = geometry.faces
                 let classifications = geometry.classification
                 let normals = geometry.normals
                 
+                let transform = meshAnchor.transform
+                
                 var triangles: [(SIMD3<Float>, SIMD3<Float>, SIMD3<Float>)] = []
                 var triangleNormals: [SIMD3<Float>] = []
+                
+                triangleNormals.reserveCapacity(faces.count)
 
                 if let classifications = classifications {
                     for index in 0..<faces.count {
@@ -169,7 +221,12 @@ struct ARViewContainer: UIViewRepresentable {
                 
                 // Step 2: Compute mean normal
                 guard !triangleNormals.isEmpty else { continue }
+                
                 let meanNormal = normalize(triangleNormals.reduce(SIMD3<Float>(0, 0, 0), +) / Float(triangleNormals.count))
+                
+//                let previousNormal = bundles[id]!.meanNormal
+//                let previousFaceCount = bundles[id]!.faceCount
+//                let meanNormal = normalize(triangleNormals.reduce(SIMD3<Float>(0, 0, 0), +) + (previousNormal * Float(previousFaceCount))) / Float(triangleNormals.count + previousFaceCount)
 //                print("Mean Normal: \(meanNormal)")
                 
                 // Step 3: Split triangles based on deviation
@@ -189,17 +246,22 @@ struct ARViewContainer: UIViewRepresentable {
 //                print("Normal Triangles Count: \(normalTriangles.count)")
 //                print("Deviant Triangles Count: \(deviantTriangles.count)")
                 
+                let meshBundle = bundles[id]!
+                
                 // Step 4: Visualize
-                if let normalEntity = createHorizontalMeshEntity(triangles: normalTriangles, color: .green) {
-                    let anchorEntity = AnchorEntity(world: .zero)
-                    anchorEntity.addChild(normalEntity)
-                    arView?.scene.addAnchor(anchorEntity)
+                if let normalEntity = createHorizontalMeshEntity(triangles: normalTriangles, color: .green, name: "GreenMesh_\(id)") {
+//                    let anchorEntity = AnchorEntity(world: .zero)
+//                    anchorEntity.addChild(normalEntity)
+//                    arView?.scene.addAnchor(anchorEntity)
+                    meshBundle.greenEntity.model = normalEntity.model
                 }
 
-                if let deviantEntity = createHorizontalMeshEntity(triangles: deviantTriangles, color: .red) {
-                    let anchorEntity = AnchorEntity(world: .zero)
-                    anchorEntity.addChild(deviantEntity)
-                    arView?.scene.addAnchor(anchorEntity)
+                if let deviantEntity = createHorizontalMeshEntity(triangles: deviantTriangles, color: .red,
+                    name: "RedMesh_\(id)") {
+//                    let anchorEntity = AnchorEntity(world: .zero)
+//                    anchorEntity.addChild(deviantEntity)
+//                    arView?.scene.addAnchor(anchorEntity)
+                    meshBundle.redEntity.model = deviantEntity.model
                 }
                 
 //                if let entity = createHorizontalMeshEntity(triangles: triangles) {
@@ -226,7 +288,8 @@ struct ARViewContainer: UIViewRepresentable {
         func createHorizontalMeshEntity(
             triangles: [(SIMD3<Float>, SIMD3<Float>, SIMD3<Float>)],
             color: UIColor = .green,
-            opacity: Float = 0.4
+            opacity: Float = 0.4,
+            name: String = "HorizontalMesh"
         ) -> ModelEntity? {
             if (triangles.isEmpty) {
                 return nil
@@ -243,7 +306,7 @@ struct ARViewContainer: UIViewRepresentable {
                 indices.append(contentsOf: [baseIndex, baseIndex + 1, baseIndex + 2])
             }
 
-            var meshDescriptors = MeshDescriptor(name: "HorizontalMesh")
+            var meshDescriptors = MeshDescriptor(name: name)
             meshDescriptors.positions = MeshBuffers.Positions(positions)
             meshDescriptors.primitives = .triangles(indices)
             guard let mesh = try? MeshResource.generate(from: [meshDescriptors]) else {
@@ -251,7 +314,7 @@ struct ARViewContainer: UIViewRepresentable {
             }
 
             var material = UnlitMaterial(color: color.withAlphaComponent(CGFloat(opacity)))
-            material.triangleFillMode = .lines
+            material.triangleFillMode = .fill
             let entity = ModelEntity(mesh: mesh, materials: [material])
             return entity
         }
