@@ -33,7 +33,7 @@ struct SegmentationModelRequestProcessor {
         self.selectionClasses = classes
     }
     
-    private func configureSegmentationRequest(request: VNCoreMLRequest) {
+    func configureSegmentationRequest(request: VNCoreMLRequest) {
         // TODO: Need to check on the ideal options for this
         request.imageCropAndScaleOption = .scaleFill
     }
