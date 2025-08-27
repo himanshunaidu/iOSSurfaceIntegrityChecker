@@ -10,7 +10,7 @@ import CoreImage
 import CoreVideo
 
 extension SegmentationModelRequestProcessor {
-    func processSegmentationRequest(with pixelBuffer: CVPixelBuffer, orientation: CGImagePropertyOrientation) -> (segmentationImage: CVPixelBuffer, segmentedIndices: [Int])? {
+    func processSegmentationRequest(pixelBuffer: CVPixelBuffer, orientation: CGImagePropertyOrientation) -> (segmentationImage: CVPixelBuffer, segmentedIndices: [Int])? {
         do {
             let segmentationRequest = VNCoreMLRequest(model: self.visionModel)
             self.configureSegmentationRequest(request: segmentationRequest)

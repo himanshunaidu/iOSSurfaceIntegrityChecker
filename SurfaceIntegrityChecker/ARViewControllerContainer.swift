@@ -77,6 +77,7 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
     }()
     
     // MARK: - Processing
+    private let segmentationFrameProcessor: SegmentationFrameProcessor = SegmentationFrameProcessor()
     private let ciContext = CIContext()
     private let processQueue = DispatchQueue(label: "ar.host.process.queue")
     private var lastProcess = Date.distantPast
