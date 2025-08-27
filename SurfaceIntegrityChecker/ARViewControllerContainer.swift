@@ -78,6 +78,8 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
     
     // MARK: - Processing
     private let segmentationFrameProcessor: SegmentationFrameProcessor = SegmentationFrameProcessor()
+    private let selectionClasses = [0]
+    
     private let ciContext = CIContext()
     private let processQueue = DispatchQueue(label: "ar.host.process.queue")
     private var lastProcess = Date.distantPast
@@ -104,17 +106,16 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
         applyDebugIfNeeded()
 
         arView.session.delegate = self
+        segmentationFrameProcessor.setSelectionClasses(self.selectionClasses)
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        print("ARHostViewController will appear; starting session.")
         runSessionIfNeeded()
     }
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
-        print("ARHostViewController will disappear; pausing session.")
         pauseSession()
     }
 
@@ -147,21 +148,22 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
     func applyOverlayLayoutIfNeeded() {
         NSLayoutConstraint.deactivate(overlayImageView.constraints)
         // Pin to top-trailing with given size and padding
-        let pad: CGFloat = 16
+//        let pad: CGFloat = 16
         NSLayoutConstraint.activate([
-            overlayImageView.widthAnchor.constraint(equalToConstant: overlaySize.width),
-            overlayImageView.heightAnchor.constraint(equalToConstant: overlaySize.height),
-            overlayImageView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: pad),
-            overlayImageView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -pad)
+            overlayImageView.topAnchor.constraint(equalTo: view.topAnchor),
+            overlayImageView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+//            overlayImageView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+//            overlayImageView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
+            overlayImageView.centerXAnchor.constraint(equalTo: view.centerXAnchor)
         ])
     }
 
     func applyDebugIfNeeded() {
         if showDebug {
-            arView.debugOptions.insert(.showStatistics)
+//            arView.debugOptions.insert(.showStatistics)
             arView.environment.sceneUnderstanding.options.insert(.occlusion)
         } else {
-            arView.debugOptions.remove(.showStatistics)
+//            arView.debugOptions.remove(.showStatistics)
             arView.environment.sceneUnderstanding.options.remove(.occlusion)
         }
     }
@@ -173,15 +175,15 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
         // NOP here; mesh work is in didAdd/didUpdate anchors
 
         // 2) Produce overlay image with throttling
-//        let now = Date()
-//        guard now.timeIntervalSince(lastProcess) >= minInterval else { return }
-//        lastProcess = now
+        let now = Date()
+        guard now.timeIntervalSince(lastProcess) >= minInterval else { return }
+        lastProcess = now
 //
-//        let pixelBuffer = frame.capturedImage
-//        let exif = exifOrientationForCurrentDevice()
-//        processQueue.async { [weak self] in
-//            self?.processOverlay(pixelBuffer: pixelBuffer, exifOrientation: exif)
-//        }
+        let pixelBuffer = frame.capturedImage
+        let exif = exifOrientationForCurrentDevice()
+        processQueue.async { [weak self] in
+            self?.processOverlay(pixelBuffer: pixelBuffer, exifOrientation: exif)
+        }
     }
     
     func session(_ session: ARSession, didAdd anchors: [ARAnchor]) {
@@ -196,27 +198,30 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
     private func processOverlay(pixelBuffer: CVPixelBuffer, exifOrientation: CGImagePropertyOrientation) {
         autoreleasepool {
             // Orient into display space
-            let base = CIImage(cvPixelBuffer: pixelBuffer).oriented(exifOrientation)
-            let extent = base.extent  // pixel space, origin bottom-left
-
+//            let base = CIImage(cvPixelBuffer: pixelBuffer).oriented(exifOrientation)
+//            print("Base Image Size and Extent: \(base.extent.size), \(base.extent)")
+//            let extent = base.extent  // pixel space, origin bottom-left
+            guard let segmentationImage: CIImage = try? segmentationFrameProcessor.processRequest(with: pixelBuffer, orientation: exifOrientation) else { return }
+            
             // Convert normalized TL ROI -> CI bottom-left pixel rect
-            let tl = roiTopLeft
-            let crop = CGRect(
-                x: tl.minX * extent.width,
-                y: (1.0 - tl.maxY) * extent.height,
-                width: tl.width * extent.width,
-                height: tl.height * extent.height
-            ).integral
+//            let tl = roiTopLeft
+//            let crop = CGRect(
+//                x: tl.minX * extent.width,
+//                y: (1.0 - tl.maxY) * extent.height,
+//                width: tl.width * extent.width,
+//                height: tl.height * extent.height
+//            ).integral
 
-            let cropped = base.cropped(to: crop)
+//            let cropped = base.cropped(to: crop)
 
             // Example post-processing (Edges)
-            let edges = CIFilter.edges()
-            edges.inputImage = cropped
-            edges.intensity = 1.5
-            let output = edges.outputImage ?? cropped
+//            let edges = CIFilter.edges()
+//            edges.inputImage = cropped
+//            edges.intensity = 1.5
+//            let output = edges.outputImage ?? cropped
 
-            guard let cg = ciContext.createCGImage(output, from: output.extent) else { return }
+            let segmentationMask = segmentationImage.oriented(exifOrientation)
+            guard let cg = ciContext.createCGImage(segmentationMask, from: segmentationMask.extent) else { return }
             let ui = UIImage(cgImage: cg)
 
             DispatchQueue.main.async { [weak self] in

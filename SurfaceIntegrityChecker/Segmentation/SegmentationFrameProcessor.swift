@@ -95,11 +95,15 @@ final class SegmentationFrameProcessor: ObservableObject {
         guard var mask = segmentationImage else {
             return nil
         }
+//        print("Segmentation Mask Size and Extent: \(mask.extent.size), \(mask.extent)")
         
         let inverse = orientation.inverted
         mask = mask.oriented(inverse)
+//        print("Inverted Mask Size and Extent: \(mask.extent.size), \(mask.extent)")
+        
         let resizedMask = CIImageUtils.undoResizeWithAspectThenCrop(
             mask, originalSize: originalSize, croppedSize: croppedSize)
+//        print("Resized Mask Size and Extent: \(resizedMask.extent.size), \(resizedMask.extent)")
         return resizedMask
     }
     
