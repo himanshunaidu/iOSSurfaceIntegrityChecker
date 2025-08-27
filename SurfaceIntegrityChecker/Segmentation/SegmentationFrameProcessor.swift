@@ -61,7 +61,7 @@ final class SegmentationFrameProcessor: ObservableObject {
         self.segmentationModelRequestProcessor?.setSelectionClasses(self.selectionClasses)
     }
     
-    func processRequest(with pixelBuffer: CVPixelBuffer, orientation: CGImagePropertyOrientation) throws -> CIImage? {
+    func processRequest(with pixelBuffer: CVPixelBuffer, orientation: CGImagePropertyOrientation) throws -> (label: CIImage?, color: CIImage?)? {
         // Step 1: Preprocess the camera image to match model input requirements
         var cIImage = CIImage(cvPixelBuffer: pixelBuffer)
         
@@ -95,16 +95,27 @@ final class SegmentationFrameProcessor: ObservableObject {
         guard var mask = segmentationImage else {
             return nil
         }
+        self.grayscaleToColorMasker.inputImage = mask
+        self.grayscaleToColorMasker.grayscaleValues = self.selectionClassGrayscaleValues
+        self.grayscaleToColorMasker.colorValues =  self.selectionClassColors
+        var colorMask = self.grayscaleToColorMasker.outputImage
 //        print("Segmentation Mask Size and Extent: \(mask.extent.size), \(mask.extent)")
         
         let inverse = orientation.inverted
         mask = mask.oriented(inverse)
 //        print("Inverted Mask Size and Extent: \(mask.extent.size), \(mask.extent)")
-        
         let resizedMask = CIImageUtils.undoResizeWithAspectThenCrop(
             mask, originalSize: originalSize, croppedSize: croppedSize)
+        
+        if var colorMask = colorMask {
+            colorMask = colorMask.oriented(inverse)
+            let resizedColorMask = CIImageUtils.undoResizeWithAspectThenCrop(
+                colorMask, originalSize: originalSize, croppedSize: croppedSize)
+            return (label: resizedMask, color: resizedColorMask)
+        }
+        
 //        print("Resized Mask Size and Extent: \(resizedMask.extent.size), \(resizedMask.extent)")
-        return resizedMask
+        return (label: resizedMask, color: nil)
     }
     
     func processImage(with cIImage: CIImage, orientation: CGImagePropertyOrientation) throws -> CIImage? {
@@ -113,11 +124,11 @@ final class SegmentationFrameProcessor: ObservableObject {
             throw SegmentationARPipelineError.invalidSegmentation
         }
         
-        self.grayscaleToColorMasker.inputImage = segmentationImage
-        self.grayscaleToColorMasker.grayscaleValues = self.selectionClassGrayscaleValues
-        self.grayscaleToColorMasker.colorValues =  self.selectionClassColors
-//        return segmentationImage
-        return self.grayscaleToColorMasker.outputImage
+//        self.grayscaleToColorMasker.inputImage = segmentationImage
+//        self.grayscaleToColorMasker.grayscaleValues = self.selectionClassGrayscaleValues
+//        self.grayscaleToColorMasker.colorValues =  self.selectionClassColors
+        return segmentationImage
+//        return self.grayscaleToColorMasker.outputImage
     }
 }
 

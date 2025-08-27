@@ -106,16 +106,12 @@ struct CIImageUtils {
                 let scale = croppedSize.height / originalSize.height
                 let newWidth = originalSize.width * scale
                 let xOffset = (croppedSize.width - newWidth) / 2.0  // negative
-                print("undoResizeWithAspectThenCrop: scale=\(scale), newWidth=\(newWidth), xOffset=\(xOffset)")
 
                 // Put the 640×640 mask back into an (newWidth × croppedH) canvas, centered
                 let canvas = CGRect(x: 0, y: 0, width: newWidth, height: croppedSize.height)
                 let translated = mask.transformed(by: CGAffineTransform(translationX: -xOffset, y: 0)) // -xOffset is positive
-                print("Translated Size: \(translated.extent.size), Extent: \(translated.extent)")
                 let background = CIImage(color: .clear).cropped(to: canvas)
-                print("Background Size: \(background.extent.size), Extent: \(background.extent)")
                 let composed = translated.composited(over: background)
-                print("Compose Size: \(composed.extent.size), Extent: \(composed.extent)")
 
                 // Scale up uniformly to original size (1/scale)
                 let inv = 1.0 / scale

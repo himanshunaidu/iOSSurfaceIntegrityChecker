@@ -201,7 +201,9 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
 //            let base = CIImage(cvPixelBuffer: pixelBuffer).oriented(exifOrientation)
 //            print("Base Image Size and Extent: \(base.extent.size), \(base.extent)")
 //            let extent = base.extent  // pixel space, origin bottom-left
-            guard let segmentationImage: CIImage = try? segmentationFrameProcessor.processRequest(with: pixelBuffer, orientation: exifOrientation) else { return }
+            guard let segmentationResults = try? segmentationFrameProcessor.processRequest(with: pixelBuffer, orientation: exifOrientation) else { return }
+            guard var segmentationLabel = segmentationResults.label else { return }
+            guard var segmentationColor = segmentationResults.color else { return }
             
             // Convert normalized TL ROI -> CI bottom-left pixel rect
 //            let tl = roiTopLeft
@@ -220,8 +222,8 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
 //            edges.intensity = 1.5
 //            let output = edges.outputImage ?? cropped
 
-            let segmentationMask = segmentationImage.oriented(exifOrientation)
-            guard let cg = ciContext.createCGImage(segmentationMask, from: segmentationMask.extent) else { return }
+            segmentationColor = segmentationColor.oriented(exifOrientation)
+            guard let cg = ciContext.createCGImage(segmentationColor, from: segmentationColor.extent) else { return }
             let ui = UIImage(cgImage: cg)
 
             DispatchQueue.main.async { [weak self] in
