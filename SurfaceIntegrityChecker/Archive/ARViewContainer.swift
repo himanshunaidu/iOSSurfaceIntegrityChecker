@@ -25,9 +25,29 @@ private struct MeshBundle {
     var assignedColor: UIColor = .green
 }
 
+final class ARViewStore: ObservableObject {
+    let view: ARView = {
+        let v = ARView(frame: .zero)
+        v.automaticallyConfigureSession = false
+        v.environment.sceneUnderstanding.options.insert(.occlusion)
+        v.debugOptions.insert(.showStatistics)
+        return v
+    }()
+
+    // Whether we already kicked off a session at least once
+    var didStartSession = false
+
+    deinit {
+        view.session.delegate = nil
+        view.session.pause()
+    }
+}
+
 struct ARViewContainer: UIViewRepresentable {
     let arView = ARView(frame: .zero)
     let normalThreshold: Float = 15.0 // Degrees threshold for normal comparison
+    
+    let onFramCallback: (ARFrame) -> Void
     
     func makeUIView(context: Context) -> ARView {
         let config = ARWorldTrackingConfiguration()
@@ -51,7 +71,7 @@ struct ARViewContainer: UIViewRepresentable {
     func updateUIView(_ uiView: ARView, context: Context) {}
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(arView: arView)
+        Coordinator(arView: arView, onFramCallback: onFramCallback)
     }
     
     private func getVideoFormat(config: ARWorldTrackingConfiguration) -> ARConfiguration.VideoFormat {
@@ -73,6 +93,8 @@ struct ARViewContainer: UIViewRepresentable {
 
     class Coordinator: NSObject, ARSessionDelegate {
         private weak var arView: ARView?
+        private let onFramCallback: (ARFrame) -> Void
+        
         var captureHighResFrames: Bool = true
         var imageSaver = ImageSaver()
         
@@ -85,11 +107,13 @@ struct ARViewContainer: UIViewRepresentable {
         private var lastCleanup: TimeInterval = 0
         private let cleanupInterval: TimeInterval = 2.0
         
-        init(arView: ARView) {
+        init(arView: ARView, onFramCallback: @escaping (ARFrame) -> Void) {
             self.arView = arView
+            self.onFramCallback = onFramCallback
         }
         
         func session(_ arSession: ARSession, didUpdate frame: ARFrame) {
+            onFramCallback(frame)
             
             if captureHighResFrames {
                 // Capture high-resolution frame if needed

@@ -32,6 +32,8 @@ struct ARViewSingleFloorContainer: UIViewRepresentable {
     let arView = ARView(frame: .zero)
     let normalThreshold: Float = 15.0 // Degrees threshold for normal comparison
     
+    
+    
     func makeUIView(context: Context) -> ARView {
         let config = ARWorldTrackingConfiguration()
         config.worldAlignment = .gravityAndHeading
