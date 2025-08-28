@@ -98,14 +98,15 @@ final class SegmentationFrameProcessor: ObservableObject {
         self.grayscaleToColorMasker.inputImage = mask
         self.grayscaleToColorMasker.grayscaleValues = self.selectionClassGrayscaleValues
         self.grayscaleToColorMasker.colorValues =  self.selectionClassColors
-        var colorMask = self.grayscaleToColorMasker.outputImage
+        let colorMask = self.grayscaleToColorMasker.outputImage
 //        print("Segmentation Mask Size and Extent: \(mask.extent.size), \(mask.extent)")
         
         let inverse = orientation.inverted
         mask = mask.oriented(inverse)
 //        print("Inverted Mask Size and Extent: \(mask.extent.size), \(mask.extent)")
-        let resizedMask = CIImageUtils.undoResizeWithAspectThenCrop(
+        var resizedMask = CIImageUtils.undoResizeWithAspectThenCrop(
             mask, originalSize: originalSize, croppedSize: croppedSize)
+        resizedMask = self.backCIImageToPixelBuffer(resizedMask)
         
         if var colorMask = colorMask {
             colorMask = colorMask.oriented(inverse)
@@ -170,5 +171,31 @@ extension SegmentationFrameProcessor {
         
         ciContext.render(image, to: pixelBuffer, bounds: CGRect(origin: .zero, size: size), colorSpace: colorSpace)
         return pixelBuffer
+    }
+    
+    private func backCIImageToPixelBuffer(_ image: CIImage) -> CIImage {
+        var imageBuffer: CVPixelBuffer?
+        let attributes: [CFString: Any] = [
+            kCVPixelBufferCGImageCompatibilityKey: true,
+            kCVPixelBufferCGBitmapContextCompatibilityKey: true,
+            kCVPixelBufferIOSurfacePropertiesKey: [:] // Required for Metal/CoreImage
+        ]
+        let status = CVPixelBufferCreate(
+            kCFAllocatorDefault,
+            Int(image.extent.width),
+            Int(image.extent.height),
+            kCVPixelFormatType_OneComponent8,
+            attributes as CFDictionary,
+            &imageBuffer
+        )
+        guard status == kCVReturnSuccess, let imageBuffer = imageBuffer else {
+            print("Error: Failed to create pixel buffer")
+            return image
+        }
+        // Render the CIImage to the pixel buffer
+        self.ciContext.render(image, to: imageBuffer, bounds: image.extent, colorSpace: CGColorSpaceCreateDeviceGray())
+        // Create a CIImage from the pixel buffer
+        let ciImage = CIImage(cvPixelBuffer: imageBuffer)
+        return ciImage
     }
 }

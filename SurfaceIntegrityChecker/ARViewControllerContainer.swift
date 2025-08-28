@@ -79,6 +79,9 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
     // MARK: - Processing
     private let segmentationFrameProcessor: SegmentationFrameProcessor = SegmentationFrameProcessor()
     private let selectionClasses = [0]
+    private var segmentationLabelImage: CIImage?
+    private var cameraTransform: simd_float4x4?
+    private var cameraIntrinsics: simd_float3x3?
     
     private let ciContext = CIContext()
     private let processQueue = DispatchQueue(label: "ar.host.process.queue")
@@ -181,8 +184,13 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
 //
         let pixelBuffer = frame.capturedImage
         let exif = exifOrientationForCurrentDevice()
+        
+        let cIImage = CIImage(cvPixelBuffer: pixelBuffer)
+        let cameraTransform = frame.camera.transform
+        let cameraIntrinsics = frame.camera.intrinsics
+        
         processQueue.async { [weak self] in
-            self?.processOverlay(pixelBuffer: pixelBuffer, exifOrientation: exif)
+            self?.processOverlay(pixelBuffer: pixelBuffer, exifOrientation: exif, cameraTransform: cameraTransform, cameraIntrinsics: cameraIntrinsics)
         }
     }
     
@@ -194,15 +202,93 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
         handleMeshAnchors(anchors)
     }
     
+    private func renderMaskTo8BitPixelBuffer(_ mask: CIImage) -> CVPixelBuffer? {
+        var pb: CVPixelBuffer?
+        let w = Int(mask.extent.width), h = Int(mask.extent.height)
+        let attrs: [String: Any] = [
+            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_OneComponent8,
+            kCVPixelBufferWidthKey as String: w,
+            kCVPixelBufferHeightKey as String: h,
+            kCVPixelBufferIOSurfacePropertiesKey as String: [:]
+        ]
+        guard CVPixelBufferCreate(nil, w, h, kCVPixelFormatType_OneComponent8, attrs as CFDictionary, &pb) == kCVReturnSuccess,
+              let pb else { return nil }
+
+        ciContext.render(mask, to: pb, bounds: mask.extent, colorSpace: nil)
+        
+//        let uniqueValues = CVPixelBufferUtils.extractUniqueGrayscaleValues(from: pb)
+//        print("Unique values in rendered mask: \(uniqueValues.sorted())")
+        return pb
+    }
+    
+    func projectWorldToPixel(_ world: simd_float3,
+                             cameraTransform: simd_float4x4, // ARCamera.transform (camera->world)
+                             intrinsics K: simd_float3x3,
+                             imageSize: CGSize) -> CGPoint? {
+        // world -> camera
+        let view = simd_inverse(cameraTransform)              // world->camera
+        let p4   = simd_float4(world, 1.0)
+        let pc   = view * p4                                  // camera space
+        let x = pc.x, y = pc.y, z = pc.z
+        
+        guard z < 0 else {
+            return nil
+        }                       // behind camera
+        
+        // normalized image plane coords (flip Y so +Y goes up in pixels)
+        let xn = x / -z
+        let yn = -y / -z
+        
+        // intrinsics (column-major)
+        let fx = K.columns.0.x
+        let fy = K.columns.1.y
+        let cx = K.columns.2.x
+        let cy = K.columns.2.y
+        
+        // pixels in sensor/native image coordinates
+        let u = fx * xn + cx
+        let v = fy * yn + cy
+        
+        if u.isFinite && v.isFinite &&
+            u >= 0 && v >= 0 &&
+            u < Float(imageSize.width) && v < Float(imageSize.height) {
+            return CGPoint(x: CGFloat(u.rounded()), y: CGFloat(v.rounded()))
+        }
+        return nil
+    }
+    
+    func sampleMask(_ pixelBuffer: CVPixelBuffer, at px: CGPoint,
+                    width: Int, height: Int, bytesPerRow: Int
+    ) -> UInt8? {
+        let w = width
+        let h = height
+        let bpr = bytesPerRow
+
+        let ix = Int(px.x), iy = Int(px.y)
+        guard ix >= 0, iy >= 0, ix < w, iy < h else {
+            return nil
+        }
+
+        guard let base = CVPixelBufferGetBaseAddress(pixelBuffer) else {
+            return nil
+        }
+        let ptr = base.assumingMemoryBound(to: UInt8.self)
+        let value = ptr[iy * bpr + ix]
+        return value
+    }
+    
     // MARK: - Overlay pipeline
-    private func processOverlay(pixelBuffer: CVPixelBuffer, exifOrientation: CGImagePropertyOrientation) {
+    private func processOverlay(pixelBuffer: CVPixelBuffer, exifOrientation: CGImagePropertyOrientation, cameraTransform: simd_float4x4, cameraIntrinsics: simd_float3x3) {
         autoreleasepool {
             // Orient into display space
 //            let base = CIImage(cvPixelBuffer: pixelBuffer).oriented(exifOrientation)
 //            print("Base Image Size and Extent: \(base.extent.size), \(base.extent)")
 //            let extent = base.extent  // pixel space, origin bottom-left
             guard let segmentationResults = try? segmentationFrameProcessor.processRequest(with: pixelBuffer, orientation: exifOrientation) else { return }
-            guard var segmentationLabel = segmentationResults.label else { return }
+            guard let segmentationLabel = segmentationResults.label else { return }
+            segmentationLabelImage = segmentationLabel
+            self.cameraTransform = cameraTransform
+            self.cameraIntrinsics = cameraIntrinsics
             guard var segmentationColor = segmentationResults.color else { return }
             
             // Convert normalized TL ROI -> CI bottom-left pixel rect
@@ -250,6 +336,27 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
     }
     
     func handleMeshAnchors(_ anchors: [ARAnchor]) {
+        // Create copy of segmentation image to avoid threading issues
+        guard let segmentationLabelImage = segmentationLabelImage,
+                let cameraTransform = cameraTransform,
+              let cameraIntrinsics = cameraIntrinsics else {
+            return
+        }
+//        guard let segmentationPixelBuffer = renderMaskTo8BitPixelBuffer(segmentationLabelImage) else {
+//            print("Failed to render segmentation mask to pixel buffer")
+//            return
+//        }
+        guard let segmentationPixelBuffer = segmentationLabelImage.pixelBuffer else {
+            print("Segmentation label image does not have underlying pixel buffer")
+            return
+        }
+        
+        CVPixelBufferLockBaseAddress(segmentationPixelBuffer, .readOnly)
+        let width = CVPixelBufferGetWidth(segmentationPixelBuffer)
+        let height = CVPixelBufferGetHeight(segmentationPixelBuffer)
+        let bpr = CVPixelBufferGetBytesPerRow(segmentationPixelBuffer)
+        defer { CVPixelBufferUnlockBaseAddress(segmentationPixelBuffer, .readOnly) }
+        
         if floorBundle == nil {
             let anchorEntity = AnchorEntity(world: .zero)
             let greenEntity = ModelEntity()
@@ -272,10 +379,13 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
         var triangles: [(SIMD3<Float>, SIMD3<Float>, SIMD3<Float>)] = []
         var triangleNormals: [SIMD3<Float>] = []
         
+        var pxRange: [CGFloat] = [1920, 1440, 0.0, 0.0] // minX, minY, maxX, maxY
+        var uniqueValueFrequencies: [UInt8: Int] = [:]
+        var counts = ["total": 0, "projectFailed": 0, "sampleFailed": 0, "classMismatch": 0, "kept": 0]
         for meshAnchor in meshAnchors {
             // Next step: Analyze this mesh anchor for height anomalies
             let geometry = meshAnchor.geometry
-            let id = meshAnchor.identifier
+//            let id = meshAnchor.identifier
             
             // Throttle updates per anchor
             if Date().timeIntervalSince1970 - (floorBundle?.lastUpdated ?? 0) < updateInterval { continue }
@@ -283,7 +393,7 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
 //                _ = geometry.vertices
             let faces = geometry.faces
             let classifications = geometry.classification
-            let normals = geometry.normals
+//            let normals = geometry.normals
             
             let transform = meshAnchor.transform
             
@@ -307,6 +417,39 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
                     let v1 = worldVertex(at: Int(face[1]), geometry: geometry, transform: transform)
                     let v2 = worldVertex(at: Int(face[2]), geometry: geometry, transform: transform)
                     
+                    // MARK: If the triangle centroid corresponds to a segmentation pixel that has value in selectionClasses, keep it
+                    let c = (v0 + v1 + v2) / 3.0
+                    counts["total", default: 0] += 1
+                    guard let px = projectWorldToPixel(
+                        c,
+                        cameraTransform: cameraTransform,
+                        intrinsics: cameraIntrinsics,
+                        imageSize: segmentationLabelImage.extent.size) else {
+                        counts["projectFailed", default: 0] += 1
+                        continue
+                    }
+                    // Update pixel range
+                    if px.x < pxRange[0] { pxRange[0] = CGFloat(px.x) }
+                    if px.y < pxRange[1] { pxRange[1] = CGFloat(px.y) }
+                    if px.x > pxRange[2] { pxRange[2] = CGFloat(px.x) }
+                    if px.y > pxRange[3] { pxRange[3] = CGFloat(px.y) }
+                    guard let value = sampleMask(
+                        segmentationPixelBuffer, at: px,
+                        width: width, height: height, bytesPerRow: bpr) else {
+//                        print("Failed to sample mask at pixel \(px)")
+                        counts["sampleFailed", default: 0] += 1
+                        continue
+                    }
+                    uniqueValueFrequencies[value, default: 0] += 1
+                    // MARK: Hard-code the match for now
+                    if value != 1 {
+//                        print("Skipping triangle at \(px) with label \(value)")
+                        counts["classMismatch", default: 0] += 1
+                        continue
+                    } else {
+                    }
+                    counts["kept", default: 0] += 1
+                    
                     triangles.append((v0, v1, v2))
 //
                     let edge1 = v1 - v0
@@ -317,7 +460,12 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
                 }
             }
         }
+//        print("Pixel Range in segmentation image for floor triangles: \(pxRange)")
 //            print("Finished processing \(meshAnchors.count) mesh anchors.")
+        if (counts["total", default: 0] > 0) {
+//            print("Unique segmentation values under floor triangles: \(uniqueValueFrequencies)")
+//            print("Counts: \(counts)")
+        }
         // Step 2: Compute mean normal
         guard !triangleNormals.isEmpty else { return }
         

@@ -178,11 +178,14 @@ struct CVPixelBufferUtils {
         guard histogramError == kvImageNoError else { return Set<UInt8>() }
         
         var uniqueValues = Set<UInt8>()
+        var uniqueValueFrequencies: [UInt8: Int] = [:]
         for i in 0..<histogram.count {
             if histogram[i] > 0 {
                 uniqueValues.insert(UInt8(i))
+                uniqueValueFrequencies[UInt8(i)] = Int(histogram[i])
             }
         }
+//        print("Unique grayscale values and their frequencies: \(uniqueValueFrequencies)")
         return uniqueValues
     }
 }
