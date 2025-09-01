@@ -12,19 +12,6 @@ import simd
 import CoreImage
 import Vision
 
-private struct MeshBundle {
-    let anchorEntity: AnchorEntity
-    var greenEntity: ModelEntity
-    var redEntity: ModelEntity
-    var lastUpdated: TimeInterval
-    var aabbCenter: SIMD3<Float> = .zero
-    var aabbExtents: SIMD3<Float> = .zero
-    
-    var faceCount: Int = 0
-    var meanNormal: SIMD3<Float> = .zero
-    var assignedColor: UIColor = .green
-}
-
 /**
  This container will have only a single aggregate floor mesh, split into two colors
  */

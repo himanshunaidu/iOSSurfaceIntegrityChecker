@@ -39,7 +39,7 @@ struct ARViewControllerContainer: UIViewControllerRepresentable {
     }
 }
 
-private struct MeshBundle {
+struct MeshBundle {
     let anchorEntity: AnchorEntity
     var greenEntity: ModelEntity
     var redEntity: ModelEntity
@@ -489,7 +489,7 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
 //                print("Deviant Triangles Count: \(deviantTriangles.count)")
         
         // Step 4: Visualize
-        if let normalEntity = createHorizontalMeshEntity(triangles: normalTriangles, color: .green, name: "GreenMesh") {
+        if let normalEntity = createHorizontalMeshEntity(triangles: normalTriangles, color: UIColor(red: 0.957, green: 0.137, blue: 0.910, alpha: 0.9), name: "GreenMesh") {
 //                    let anchorEntity = AnchorEntity(world: .zero)
 //                    anchorEntity.addChild(normalEntity)
 //                    arView?.scene.addAnchor(anchorEntity)

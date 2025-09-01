@@ -12,19 +12,6 @@ import simd
 import CoreImage
 import Vision
 
-private struct MeshBundle {
-    let anchorEntity: AnchorEntity
-    var greenEntity: ModelEntity
-    var redEntity: ModelEntity
-    var lastUpdated: TimeInterval
-    var aabbCenter: SIMD3<Float> = .zero
-    var aabbExtents: SIMD3<Float> = .zero
-    
-    var faceCount: Int = 0
-    var meanNormal: SIMD3<Float> = .zero
-    var assignedColor: UIColor = .green
-}
-
 final class ARViewStore: ObservableObject {
     let view: ARView = {
         let v = ARView(frame: .zero)
@@ -214,7 +201,7 @@ struct ARViewContainer: UIViewRepresentable {
                         
                         // We're interested in floor-like horizontal surfaces
                         guard classification == .floor else { continue }
-//                        
+//
                         let v0 = worldVertex(at: Int(face[0]), geometry: geometry, transform: transform)
                         let v1 = worldVertex(at: Int(face[1]), geometry: geometry, transform: transform)
                         let v2 = worldVertex(at: Int(face[2]), geometry: geometry, transform: transform)
