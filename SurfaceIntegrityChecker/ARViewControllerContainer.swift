@@ -17,12 +17,14 @@ struct ARViewControllerContainer: UIViewControllerRepresentable {
     var roiTopLeft: CGRect
     var overlaySize: CGSize
     var showDebug: Bool = false
+    var arResourceUpdateCallback: (MeshBundle?) -> Void
     
     func makeUIViewController(context: Context) -> ARHostViewController {
         let vc = ARHostViewController()
         vc.roiTopLeft = roiTopLeft
         vc.overlaySize = overlaySize
         vc.showDebug = showDebug
+        vc.arResourceUpdateCallback = arResourceUpdateCallback
         return vc
     }
     
@@ -30,6 +32,7 @@ struct ARViewControllerContainer: UIViewControllerRepresentable {
         uiViewController.roiTopLeft = roiTopLeft
         uiViewController.overlaySize = overlaySize
         uiViewController.showDebug = showDebug
+        uiViewController.arResourceUpdateCallback = arResourceUpdateCallback
         uiViewController.applyOverlayLayoutIfNeeded()
         uiViewController.applyDebugIfNeeded()
     }
@@ -58,6 +61,7 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
     var roiTopLeft: CGRect = CGRect(x: 0.60, y: 0.08, width: 0.32, height: 0.32) // normalized TL
     var overlaySize: CGSize = CGSize(width: 160, height: 160)
     var showDebug: Bool = true
+    var arResourceUpdateCallback: ((MeshBundle?) -> Void)?
     
     // MARK: - Views
     private let arView: ARView = {
@@ -92,16 +96,6 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
     private let updateInterval: TimeInterval = 0.033
     
     private var integrityCalculator: IntegrityCalculator = IntegrityCalculator()
-    private lazy var analyzeButton: UIButton = {
-        let b = UIButton(type: .system)
-        b.setTitle("Analyze", for: .normal)
-        b.backgroundColor = UIColor.systemBlue
-        b.setTitleColor(.white, for: .normal)
-        b.layer.cornerRadius = 18
-        b.contentEdgeInsets = UIEdgeInsets(top: 10, left: 16, bottom: 10, right: 16)
-        b.addTarget(self, action: #selector(onTapAnalyze), for: .touchUpInside)
-        return b
-    }()
     
     // MARK: - Lifecycle
     override func viewDidLoad() {
@@ -120,13 +114,13 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
         applyOverlayLayoutIfNeeded()
         applyDebugIfNeeded()
         
-        arView.addSubview(analyzeButton)
-        analyzeButton.translatesAutoresizingMaskIntoConstraints = false
-
-        NSLayoutConstraint.activate([
-            analyzeButton.trailingAnchor.constraint(equalTo: arView.safeAreaLayoutGuide.trailingAnchor, constant: -16),
-            analyzeButton.bottomAnchor.constraint(equalTo: arView.safeAreaLayoutGuide.bottomAnchor, constant: -16)
-        ])
+//        arView.addSubview(analyzeButton)
+//        analyzeButton.translatesAutoresizingMaskIntoConstraints = false
+//
+//        NSLayoutConstraint.activate([
+//            analyzeButton.trailingAnchor.constraint(equalTo: arView.safeAreaLayoutGuide.trailingAnchor, constant: -16),
+//            analyzeButton.bottomAnchor.constraint(equalTo: arView.safeAreaLayoutGuide.bottomAnchor, constant: -16)
+//        ])
 
         arView.session.delegate = self
         segmentationFrameProcessor.setSelectionClasses(self.selectionClasses)
@@ -216,10 +210,12 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
     
     func session(_ session: ARSession, didAdd anchors: [ARAnchor]) {
         handleMeshAnchors(anchors)
+        self.arResourceUpdateCallback?(floorBundle)
     }
     
     func session(_ session: ARSession, didUpdate anchors: [ARAnchor]) {
         handleMeshAnchors(anchors)
+        self.arResourceUpdateCallback?(floorBundle)
     }
     
     private func renderMaskTo8BitPixelBuffer(_ mask: CIImage) -> CVPixelBuffer? {
@@ -574,14 +570,5 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
         material.triangleFillMode = .fill
         let entity = ModelEntity(mesh: mesh, materials: [material])
         return entity
-    }
-    
-    @objc func onTapAnalyze() {
-        guard let floorBundle = floorBundle else {
-            print("No floor mesh to analyze")
-            return
-        }
-        let integrity = integrityCalculator.calculateIntegrity(of: floorBundle)
-        print("Calculated Integrity: \(integrity)")
     }
 }
