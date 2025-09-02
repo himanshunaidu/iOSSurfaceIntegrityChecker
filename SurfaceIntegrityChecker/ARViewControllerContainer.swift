@@ -91,6 +91,18 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
     private var floorBundle: MeshBundle?
     private let updateInterval: TimeInterval = 0.033
     
+    private var integrityCalculator: IntegrityCalculator = IntegrityCalculator()
+    private lazy var analyzeButton: UIButton = {
+        let b = UIButton(type: .system)
+        b.setTitle("Analyze", for: .normal)
+        b.backgroundColor = UIColor.systemBlue
+        b.setTitleColor(.white, for: .normal)
+        b.layer.cornerRadius = 18
+        b.contentEdgeInsets = UIEdgeInsets(top: 10, left: 16, bottom: 10, right: 16)
+        b.addTarget(self, action: #selector(onTapAnalyze), for: .touchUpInside)
+        return b
+    }()
+    
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -107,6 +119,14 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
         arView.addSubview(overlayImageView)
         applyOverlayLayoutIfNeeded()
         applyDebugIfNeeded()
+        
+        arView.addSubview(analyzeButton)
+        analyzeButton.translatesAutoresizingMaskIntoConstraints = false
+
+        NSLayoutConstraint.activate([
+            analyzeButton.trailingAnchor.constraint(equalTo: arView.safeAreaLayoutGuide.trailingAnchor, constant: -16),
+            analyzeButton.bottomAnchor.constraint(equalTo: arView.safeAreaLayoutGuide.bottomAnchor, constant: -16)
+        ])
 
         arView.session.delegate = self
         segmentationFrameProcessor.setSelectionClasses(self.selectionClasses)
@@ -554,5 +574,14 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
         material.triangleFillMode = .fill
         let entity = ModelEntity(mesh: mesh, materials: [material])
         return entity
+    }
+    
+    @objc func onTapAnalyze() {
+        guard let floorBundle = floorBundle else {
+            print("No floor mesh to analyze")
+            return
+        }
+        let integrity = integrityCalculator.calculateIntegrity(of: floorBundle)
+        print("Calculated Integrity: \(integrity)")
     }
 }

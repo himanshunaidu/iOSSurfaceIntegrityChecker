@@ -19,6 +19,7 @@ class IntegrityCalculator {
         }
         
         let connectedComponents = connectedComponentsCalculator.getConnectedComponents(deviantMesh)
+        print("Areas of connected components: \(connectedComponents.map { $0.totalArea })")
         let totalArea = connectedComponents.reduce(0, { $0 + $1.totalArea})
         
         return totalArea > 0.1
