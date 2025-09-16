@@ -53,6 +53,9 @@ struct MeshBundle {
     var faceCount: Int = 0
     var meanNormal: SIMD3<Float> = .zero
     var assignedColor: UIColor = .green
+    
+    var cameraTransform: simd_float4x4?
+    var cameraIntrinsics: simd_float3x3?
 }
 
 final class ARHostViewController: UIViewController, ARSessionDelegate {
@@ -207,6 +210,8 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
         
         processQueue.async { [weak self] in
             self?.processOverlay(pixelBuffer: pixelBuffer, exifOrientation: exif, cameraTransform: cameraTransform, cameraIntrinsics: cameraIntrinsics)
+            self?.floorBundle?.cameraTransform = cameraTransform
+            self?.floorBundle?.cameraIntrinsics = cameraIntrinsics
         }
     }
     

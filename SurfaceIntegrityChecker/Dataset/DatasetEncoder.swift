@@ -51,7 +51,6 @@ class DatasetEncoder {
     
     public func addData(
         frameId: UUID,
-        cameraTransform: simd_float4x4, cameraIntrinsics: simd_float3x3,
         meshBundle: MeshBundle,
         timestamp: TimeInterval = Date().timeIntervalSince1970
     ) {
@@ -62,8 +61,12 @@ class DatasetEncoder {
         
         let frameNumber: UUID = frameId
         
-        self.cameraTransformEncoder.add(transform: cameraTransform, timestamp: timestamp, frameNumber: frameNumber)
-        self.writeIntrinsics(cameraIntrinsics: cameraIntrinsics)
+        if let cameraTransform = meshBundle.cameraTransform {
+            self.cameraTransformEncoder.add(transform: cameraTransform, timestamp: timestamp, frameNumber: frameNumber)
+        }
+        if let cameraIntrinsics = meshBundle.cameraIntrinsics {
+            self.writeIntrinsics(cameraIntrinsics: cameraIntrinsics)
+        }
         self.meshEncoder.save(meshBundle: meshBundle, frameNumber: frameNumber)
         
         savedFrames = savedFrames + 1
