@@ -144,7 +144,7 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
     func runSessionIfNeeded() {
         let config = ARWorldTrackingConfiguration()
         config.worldAlignment = .gravityAndHeading
-        config.planeDetection = [.horizontal]
+//        config.planeDetection = [.horizontal]
         if ARWorldTrackingConfiguration.supportsSceneReconstruction(.meshWithClassification) {
             config.sceneReconstruction = .meshWithClassification
         }
@@ -179,9 +179,11 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
         if showDebug {
 //            arView.debugOptions.insert(.showStatistics)
             arView.environment.sceneUnderstanding.options.insert(.occlusion)
+            arView.debugOptions.insert(.showSceneUnderstanding)
         } else {
 //            arView.debugOptions.remove(.showStatistics)
             arView.environment.sceneUnderstanding.options.remove(.occlusion)
+            arView.debugOptions.remove(.showSceneUnderstanding)
         }
     }
     
@@ -427,43 +429,43 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
                     let classification = ARMeshClassification(rawValue: classificationValue) ?? .none
                     
                     // We're interested in floor-like horizontal surfaces
-                    guard classification == .floor else { continue }
+//                    guard classification == .floor else { continue }
 //
                     let v0 = worldVertex(at: Int(face[0]), geometry: geometry, transform: transform)
                     let v1 = worldVertex(at: Int(face[1]), geometry: geometry, transform: transform)
                     let v2 = worldVertex(at: Int(face[2]), geometry: geometry, transform: transform)
                     
                     // MARK: If the triangle centroid corresponds to a segmentation pixel that has value in selectionClasses, keep it
-                    let c = (v0 + v1 + v2) / 3.0
-                    counts["total", default: 0] += 1
-                    guard let px = projectWorldToPixel(
-                        c,
-                        cameraTransform: cameraTransform,
-                        intrinsics: cameraIntrinsics,
-                        imageSize: segmentationLabelImage.extent.size) else {
-                        counts["projectFailed", default: 0] += 1
-                        continue
-                    }
-                    // Update pixel range
-                    if px.x < pxRange[0] { pxRange[0] = CGFloat(px.x) }
-                    if px.y < pxRange[1] { pxRange[1] = CGFloat(px.y) }
-                    if px.x > pxRange[2] { pxRange[2] = CGFloat(px.x) }
-                    if px.y > pxRange[3] { pxRange[3] = CGFloat(px.y) }
-                    guard let value = sampleMask(
-                        segmentationPixelBuffer, at: px,
-                        width: width, height: height, bytesPerRow: bpr) else {
-//                        print("Failed to sample mask at pixel \(px)")
-                        counts["sampleFailed", default: 0] += 1
-                        continue
-                    }
-                    uniqueValueFrequencies[value, default: 0] += 1
-                    // MARK: Hard-code the match for now
-                    if value != 1 {
-//                        print("Skipping triangle at \(px) with label \(value)")
-                        counts["classMismatch", default: 0] += 1
-                        continue
-                    } else {
-                    }
+//                    let c = (v0 + v1 + v2) / 3.0
+//                    counts["total", default: 0] += 1
+//                    guard let px = projectWorldToPixel(
+//                        c,
+//                        cameraTransform: cameraTransform,
+//                        intrinsics: cameraIntrinsics,
+//                        imageSize: segmentationLabelImage.extent.size) else {
+//                        counts["projectFailed", default: 0] += 1
+//                        continue
+//                    }
+//                    // Update pixel range
+//                    if px.x < pxRange[0] { pxRange[0] = CGFloat(px.x) }
+//                    if px.y < pxRange[1] { pxRange[1] = CGFloat(px.y) }
+//                    if px.x > pxRange[2] { pxRange[2] = CGFloat(px.x) }
+//                    if px.y > pxRange[3] { pxRange[3] = CGFloat(px.y) }
+//                    guard let value = sampleMask(
+//                        segmentationPixelBuffer, at: px,
+//                        width: width, height: height, bytesPerRow: bpr) else {
+////                        print("Failed to sample mask at pixel \(px)")
+//                        counts["sampleFailed", default: 0] += 1
+//                        continue
+//                    }
+//                    uniqueValueFrequencies[value, default: 0] += 1
+//                    // MARK: Hard-code the match for now
+//                    if value != 1 {
+////                        print("Skipping triangle at \(px) with label \(value)")
+//                        counts["classMismatch", default: 0] += 1
+//                        continue
+//                    } else {
+//                    }
                     counts["kept", default: 0] += 1
                     
                     triangles.append((v0, v1, v2))
@@ -485,15 +487,16 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
         // Step 2: Compute mean normal
         guard !triangleNormals.isEmpty else { return }
         
-        let meanNormal = normalize(triangleNormals.reduce(SIMD3<Float>(0, 0, 0), +) / Float(triangleNormals.count))
+//        let meanNormal = normalize(triangleNormals.reduce(SIMD3<Float>(0, 0, 0), +) / Float(triangleNormals.count))
+        let meanNormal = simd_float3(0, 1, 0) // Assume up vector for floor
         
         // Step 3: Split triangles based on deviation
-        let thresholdDegrees: Float = 15.0
+        let thresholdDegrees: Float = 5.0
         var normalTriangles: [(SIMD3<Float>, SIMD3<Float>, SIMD3<Float>)] = []
         var deviantTriangles: [(SIMD3<Float>, SIMD3<Float>, SIMD3<Float>)] = []
         
         for (i, triangle) in triangles.enumerated() {
-            let angleRad = acos(dot(triangleNormals[i], meanNormal))
+            let angleRad = abs(acos(dot(triangleNormals[i], meanNormal)))
             let angleDeg = angleRad * (180.0 / .pi)
             if angleDeg > thresholdDegrees {
                 deviantTriangles.append(triangle)
@@ -571,4 +574,40 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
         let entity = ModelEntity(mesh: mesh, materials: [material])
         return entity
     }
+    
+//    func createColorMeshEntity(
+//        triangles: [(SIMD3<Float>, SIMD3<Float>, SIMD3<Float>)],
+//        normals: [SIMD3<Float>],
+//        opacity: Float = 0.4,
+//        name: String = "ColorMesh"
+//    ) -> ModelEntity? {
+//        if (triangles.isEmpty) {
+//            return nil
+//        }
+//        
+//        var positions: [SIMD3<Float>] = []
+//        var indices: [UInt32] = []
+//        var colors: [SIMD4<Float>] = []
+//
+//        for (i, triangle) in triangles.enumerated() {
+//            let baseIndex = UInt32(i * 3)
+//            positions.append(triangle.0)
+//            positions.append(triangle.1)
+//            positions.append(triangle.2)
+//            indices.append(contentsOf: [baseIndex, baseIndex + 1, baseIndex + 2])
+//            
+//            let normal = normals[i]
+//            let normalColor = (normal * 0.5) + SIMD3<Float>(repeating: 0.5)
+//            let color = SIMD4<Float>(abs(normal.x), abs(normal.y), abs(normal.z), opacity)
+//            colors.append(contentsOf: [color, color, color])
+//        }
+//        
+//        var meshDescriptors = MeshDescriptor(name: name)
+//        meshDescriptors.positions = MeshBuffers.Positions(positions)
+//        meshDescriptors.primitives = .triangles(indices)
+//        meshDescriptors.colors = .colors(colors)
+//        guard let mesh = try? MeshResource.generate(from: [meshDescriptors]) else {
+//            return nil
+//        }
+//    }
 }

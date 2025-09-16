@@ -31,7 +31,7 @@ struct ContentView: View {
 //        ARViewSingleFloorContainer().ignoresSafeArea()
         
         VStack {
-            Button("Analyze Mesh Resources") {
+            Button("Analyze") {
                 var integrity: Bool = false
                 if let arResources = arResources {
                     integrity = integrityCalculator.calculateIntegrity(of: arResources)

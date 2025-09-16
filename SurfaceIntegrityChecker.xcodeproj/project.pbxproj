@@ -34,9 +34,22 @@
 		A38B630E2E42D18B0004CA5D /* SurfaceIntegrityCheckerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SurfaceIntegrityCheckerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		A3420E862E79EF2400CD617E /* Exceptions for "SurfaceIntegrityChecker" folder in "SurfaceIntegrityChecker" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = A38B62F22E42D1890004CA5D /* SurfaceIntegrityChecker */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		A38B62F52E42D1890004CA5D /* SurfaceIntegrityChecker */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A3420E862E79EF2400CD617E /* Exceptions for "SurfaceIntegrityChecker" folder in "SurfaceIntegrityChecker" target */,
+			);
 			path = SurfaceIntegrityChecker;
 			sourceTree = "<group>";
 		};
@@ -408,6 +421,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SurfaceIntegrityChecker/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Used to analyze surroundings";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "We will save the starting frame";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -449,6 +463,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SurfaceIntegrityChecker/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Used to analyze surroundings";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "We will save the starting frame";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;

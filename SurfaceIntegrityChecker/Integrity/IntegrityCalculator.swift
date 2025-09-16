@@ -24,6 +24,4 @@ class IntegrityCalculator {
         
         return totalArea > 0.1
     }
-    
-    
 }
