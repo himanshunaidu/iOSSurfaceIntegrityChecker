@@ -34,7 +34,7 @@ struct ContentView: View {
     @State var integrityResult: IntegrityStatus = .intact
     
     private var integrityCalculator: IntegrityCalculator = IntegrityCalculator()
-    private var datasetEncoder = DatasetEncoder(rootDirectoryName: "Experiment_1")
+//    private var datasetEncoder = DatasetEncoder(rootDirectoryName: "Experiment_1")
     
     var body: some View {
         ARViewControllerContainer(
@@ -76,8 +76,11 @@ struct ContentView: View {
 }
 
 struct IntegrityResultView: View {
+    var ROOT_DIRECTORY_NAME = "Experiment_1"
+    
     @State var integrityResult: IntegrityStatus
     @State var datasetName: String = ""
+    @State private var datasetSaveSuccess: Bool = false
     @State private var datasetSaveError: String? = nil
     var arResources: MeshBundle?
     
@@ -104,18 +107,27 @@ struct IntegrityResultView: View {
                     .foregroundColor(.red)
                     .padding()
             }
+            if datasetSaveSuccess {
+                Text("Dataset saved successfully!")
+                    .foregroundColor(.green)
+                    .padding()
+            }
             
             Button("Save Result") {
                 // Action to save the result
                 if let arResources = arResources {
                     let datasetName = datasetName.isEmpty ? UUID().uuidString : datasetName
-                    let datasetEncoder = DatasetEncoder(rootDirectoryName: "Experiment_1", directoryName: datasetName)
                     do {
+                        let datasetEncoder = try DatasetEncoder(rootDirectoryName: ROOT_DIRECTORY_NAME, directoryName: datasetName)
                         try datasetEncoder.addData(frameString: UUID().uuidString, meshBundle: arResources)
                     } catch {
+                        datasetSaveSuccess = false
                         datasetSaveError = "Failed to save dataset: \(error)"
                         print(datasetSaveError!)
+                        return
                     }
+                    datasetSaveSuccess = true
+                    datasetSaveError = nil
                 } else {
                     print("No AR Resources available for saving.")
                 }

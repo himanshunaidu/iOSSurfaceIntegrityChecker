@@ -71,7 +71,7 @@ class DatasetEncoder {
     private var counter: Int = 0
     public var capturedFrameIds: Set<String> = []
     
-    init(rootDirectoryName: String, directoryName: String? = nil) {
+    init(rootDirectoryName: String, directoryName: String? = nil) throws {
         rootDirectoryURL = DatasetEncoder.createDirectory(directoryName: rootDirectoryName)
         
         // Current date and time as a string
@@ -81,6 +81,9 @@ class DatasetEncoder {
         
         // Create a unique directory name using the date and time
         let directoryName = directoryName ?? dateString
+        if (DatasetEncoder.checkDirectory(directoryName: directoryName, relativeTo: rootDirectoryURL)) {
+            throw DatasetEncodingError.directoryAlreadyExists
+        }
         datasetDirectoryURL = DatasetEncoder.createDirectory(directoryName: directoryName, relativeTo: rootDirectoryURL)
         
         self.cameraMatrixPath = datasetDirectoryURL.appendingPathComponent("camera_matrix.csv", isDirectory: false)
@@ -99,6 +102,19 @@ class DatasetEncoder {
         self.confidenceEncoder = ConfidenceEncoder(outDirectory: self.confidenceFilePath)
         self.locationEncoder = LocationEncoder(url: self.locationPath)
         self.otherDetailsEncoder = OtherDetailsEncoder(url: self.otherDetailsPath)
+    }
+    
+    static private func checkDirectory(directoryName: String, relativeTo: URL? = nil) -> Bool {
+        var relativeTo = relativeTo
+        if relativeTo == nil {
+            relativeTo = FileManager.default.urls(for:.documentDirectory, in: .userDomainMask).first!
+        }
+        let directory = URL(filePath: directoryName, directoryHint: .isDirectory, relativeTo: relativeTo)
+        if FileManager.default.fileExists(atPath: directory.path) {
+            // Return existing directory if it already exists
+            return true
+        }
+        return false
     }
     
     static private func createDirectory(directoryName: String, relativeTo: URL? = nil) -> URL {
