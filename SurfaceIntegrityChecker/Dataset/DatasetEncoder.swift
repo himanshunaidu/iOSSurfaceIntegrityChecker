@@ -38,8 +38,7 @@ class DatasetEncoder {
         let dateString = dateFormatter.string(from: Date())
         
         // Create a unique directory name using the date and time
-        let defaultURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        self.datasetDirectoryURL = defaultURL.appendingPathComponent(dateString)
+        datasetDirectoryURL = DatasetEncoder.createDirectory(directoryName: dateString)
         
         self.cameraMatrixPath = datasetDirectoryURL.appendingPathComponent("camera_matrix.csv", isDirectory: false)
         self.cameraTransformPath = datasetDirectoryURL.appendingPathComponent("camera_transform.csv", isDirectory: false)
@@ -47,6 +46,21 @@ class DatasetEncoder {
         
         self.cameraTransformEncoder = CameraTransformEncoder(url: self.cameraTransformPath)
         self.meshEncoder = MeshEncoder(outDirectory: self.meshPath)
+    }
+    
+    static private func createDirectory(directoryName: String) -> URL {
+        let relativeTo = FileManager.default.urls(for:.documentDirectory, in: .userDomainMask).first!
+        let directory = URL(filePath: directoryName, directoryHint: .isDirectory, relativeTo: relativeTo)
+        if FileManager.default.fileExists(atPath: directory.path) {
+            // Return existing directory if it already exists
+            return directory
+        }
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: nil)
+        } catch let error as NSError {
+            print("Error creating directory. \(error), \(error.userInfo)")
+        }
+        return directory
     }
     
     public func addData(

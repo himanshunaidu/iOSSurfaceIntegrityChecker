@@ -46,6 +46,7 @@ struct MeshBundle {
     let anchorEntity: AnchorEntity
     var greenEntity: ModelEntity
     var redEntity: ModelEntity
+    var fullEntity: ModelEntity?
     var lastUpdated: TimeInterval
     var aabbCenter: SIMD3<Float> = .zero
     var aabbExtents: SIMD3<Float> = .zero
@@ -526,6 +527,10 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
 //                    anchorEntity.addChild(deviantEntity)
 //                    arView?.scene.addAnchor(anchorEntity)
             floorBundle?.redEntity.model = deviantEntity.model
+        }
+        
+        if let fullEntity = createHorizontalMeshEntity(triangles: triangles, color: floorBundle?.assignedColor ?? .green, opacity: 0.25, name: "FullMesh") {
+            floorBundle?.fullEntity = fullEntity
         }
         
 //                if let entity = createHorizontalMeshEntity(triangles: triangles) {
