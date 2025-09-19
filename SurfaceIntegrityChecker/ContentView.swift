@@ -7,6 +7,22 @@
 
 import SwiftUI
 
+enum IntegrityStatus: CaseIterable, Identifiable, CustomStringConvertible {
+    var id: Self { self }
+    
+    case intact
+    case compromised
+    
+    var description: String {
+        switch self {
+        case .intact:
+            return "The surface is intact."
+        case .compromised:
+            return "The surface has integrity issues."
+        }
+    }
+}
+
 struct ContentView: View {
     
     @State var arResources: MeshBundle?
@@ -15,7 +31,7 @@ struct ContentView: View {
     }
     
     @State var showIntegritySheet = false
-    @State var integrityResult: Bool = false
+    @State var integrityResult: IntegrityStatus = .intact
     
     private var integrityCalculator: IntegrityCalculator = IntegrityCalculator()
     private var datasetEncoder = DatasetEncoder(rootDirectoryName: "Experiment_1")
@@ -45,7 +61,7 @@ struct ContentView: View {
                 } else {
                     print("No AR Resources available for integrity calculation.")
                 }
-                integrityResult = integrity
+                integrityResult = integrity ? .compromised : .intact
                 showIntegritySheet = true
             }
             .buttonStyle(.borderedProminent)
@@ -60,17 +76,22 @@ struct ContentView: View {
 }
 
 struct IntegrityResultView: View {
-    var integrityResult: Bool
+    @State var integrityResult: IntegrityStatus
     
     var body: some View {
         VStack {
             Text("Surface Integrity Result")
                 .font(.title)
                 .padding()
-            Text(!integrityResult ? "The surface is intact." : "The surface has integrity issues.")
-                .font(.headline)
-                .foregroundColor(!integrityResult ? .green : .red)
-                .padding()
+//            Text((integrityResult == .intact) ? "The surface is intact." : "The surface has integrity issues.")
+//                .font(.headline)
+//                .foregroundColor((integrityResult == .intact) ? .green : .red)
+//                .padding()
+            Picker("Status", selection: $integrityResult) {
+                ForEach(IntegrityStatus.allCases) { option in
+                    Text(String(describing: option))
+                }
+            }
         }
     }
 }
