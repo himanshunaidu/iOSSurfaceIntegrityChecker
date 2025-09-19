@@ -26,9 +26,12 @@ enum IntegrityStatus: CaseIterable, Identifiable, CustomStringConvertible {
 struct ContentView: View {
     
     @State var arResources: MeshBundle?
-    private func getARResources(meshBundle: MeshBundle?) {
+    private func getARResources(meshBundle: MeshBundle?, shouldCallResourceUpdateCallback: Bool) {
+        guard shouldCallResourceUpdateCallback, let meshBundle else { return }
+        print("Updating AR Resources received in ContentView since shouldCallResourceUpdateCallback and meshBundle is available")
         self.arResources = meshBundle
     }
+    @State var shouldCallResourceUpdateCallback: Bool = true
     
     @State var showIntegritySheet = false
     @State var integrityResult: IntegrityStatus = .intact
@@ -42,13 +45,15 @@ struct ContentView: View {
             roiTopLeft: CGRect(x: 0.60, y: 0.08, width: 0.32, height: 0.32),
             overlaySize: CGSize(width: 160, height: 160),
             showDebug: true,
-            arResourceUpdateCallback: getARResources
+            arResourceUpdateCallback: getARResources,
+            shouldCallResourceUpdateCallback: $shouldCallResourceUpdateCallback
         )
         .ignoresSafeArea()
 //        ARViewSingleFloorContainer().ignoresSafeArea()
         
         VStack {
             Button("Analyze") {
+                shouldCallResourceUpdateCallback = false
                 var integrity: Bool = false
                 if let arResources = arResources {
                     integrity = integrityCalculator.calculateIntegrity(of: arResources)
@@ -69,8 +74,13 @@ struct ContentView: View {
         .padding(.trailing, 16)
         .padding(.bottom, 16)
         
-        .sheet(isPresented: $showIntegritySheet) {
+        .sheet(isPresented: $showIntegritySheet, onDismiss: {
+            shouldCallResourceUpdateCallback = true
+        }) {
             IntegrityResultView(integrityResult: integrityResult, arResources: arResources)
+        }
+        .onChange(of: showIntegritySheet) { isPresented in
+            shouldCallResourceUpdateCallback = !isPresented
         }
     }
 }
@@ -78,11 +88,11 @@ struct ContentView: View {
 struct IntegrityResultView: View {
     var ROOT_DIRECTORY_NAME = "Experiment_1"
     
-    @State var integrityResult: IntegrityStatus
     @State var datasetName: String = ""
     @State private var datasetSaveSuccess: Bool = false
     @State private var datasetSaveError: String? = nil
-    var arResources: MeshBundle?
+    @State var integrityResult: IntegrityStatus
+    @State var arResources: MeshBundle?
     
     var body: some View {
         VStack {

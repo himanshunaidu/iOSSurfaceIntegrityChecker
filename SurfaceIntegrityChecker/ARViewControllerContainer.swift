@@ -17,14 +17,16 @@ struct ARViewControllerContainer: UIViewControllerRepresentable {
     var roiTopLeft: CGRect
     var overlaySize: CGSize
     var showDebug: Bool = false
-    var arResourceUpdateCallback: (MeshBundle?) -> Void
+    var arResourceUpdateCallback: (MeshBundle?, Bool) -> Void
     var locationManager: LocationManager = LocationManager()
+    @Binding var shouldCallResourceUpdateCallback: Bool
     
     func makeUIViewController(context: Context) -> ARHostViewController {
         let vc = ARHostViewController()
         vc.roiTopLeft = roiTopLeft
         vc.overlaySize = overlaySize
         vc.showDebug = showDebug
+        vc.shouldCallResourceUpdateCallback = shouldCallResourceUpdateCallback
         vc.arResourceUpdateCallback = arResourceUpdateCallback
         vc.locationManager = locationManager
         return vc
@@ -35,11 +37,13 @@ struct ARViewControllerContainer: UIViewControllerRepresentable {
         uiViewController.overlaySize = overlaySize
         uiViewController.showDebug = showDebug
         uiViewController.arResourceUpdateCallback = arResourceUpdateCallback
+        uiViewController.shouldCallResourceUpdateCallback = shouldCallResourceUpdateCallback
         uiViewController.applyOverlayLayoutIfNeeded()
         uiViewController.applyDebugIfNeeded()
     }
     
     static func dismantleUIViewController(_ uiViewController: ARHostViewController, coordinator: ()) {
+        print("Dismantling ARHostViewController")
         uiViewController.pauseSession()
     }
 }
@@ -71,8 +75,9 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
     var roiTopLeft: CGRect = CGRect(x: 0.60, y: 0.08, width: 0.32, height: 0.32) // normalized TL
     var overlaySize: CGSize = CGSize(width: 160, height: 160)
     var showDebug: Bool = true
-    var arResourceUpdateCallback: ((MeshBundle?) -> Void)?
+    var arResourceUpdateCallback: ((MeshBundle?, Bool) -> Void)?
     var locationManager: LocationManager?
+    var shouldCallResourceUpdateCallback: Bool = true
     
     // MARK: - Views
     private let arView: ARView = {
@@ -106,7 +111,7 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
     private var floorBundle: MeshBundle?
     private let updateInterval: TimeInterval = 0.033
     
-    private var integrityCalculator: IntegrityCalculator = IntegrityCalculator()
+//    private var integrityCalculator: IntegrityCalculator = IntegrityCalculator()
     
     // MARK: - Lifecycle
     override func viewDidLoad() {
@@ -168,6 +173,7 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
     }
     
     func pauseSession() {
+        print("Pausing AR session")
         arView.session.delegate = nil
         arView.session.pause()
     }
@@ -246,12 +252,12 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
     
     func session(_ session: ARSession, didAdd anchors: [ARAnchor]) {
         handleMeshAnchors(anchors)
-        self.arResourceUpdateCallback?(floorBundle)
+        self.arResourceUpdateCallback?(floorBundle, shouldCallResourceUpdateCallback)
     }
     
     func session(_ session: ARSession, didUpdate anchors: [ARAnchor]) {
         handleMeshAnchors(anchors)
-        self.arResourceUpdateCallback?(floorBundle)
+        self.arResourceUpdateCallback?(floorBundle, shouldCallResourceUpdateCallback)
     }
     
     private func renderMaskTo8BitPixelBuffer(_ mask: CIImage) -> CVPixelBuffer? {
