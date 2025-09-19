@@ -159,10 +159,10 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
         if ARWorldTrackingConfiguration.supportsSceneReconstruction(.meshWithClassification) {
             config.sceneReconstruction = .meshWithClassification
         }
-        if ARWorldTrackingConfiguration.supportsFrameSemantics(.smoothedSceneDepth) {
-            config.frameSemantics.insert(.smoothedSceneDepth)
-        } else if ARWorldTrackingConfiguration.supportsFrameSemantics(.sceneDepth) {
+        if ARWorldTrackingConfiguration.supportsFrameSemantics(.sceneDepth) {
             config.frameSemantics.insert(.sceneDepth)
+        } else if ARWorldTrackingConfiguration.supportsFrameSemantics(.smoothedSceneDepth) {
+            config.frameSemantics.insert(.smoothedSceneDepth)
         }
         arView.session.run(config, options: [])
     }
@@ -216,10 +216,14 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
         let cameraTransform = frame.camera.transform
         let cameraIntrinsics = frame.camera.intrinsics
         
-        let depthBuffer = frame.sceneDepth?.depthMap
-        let depthImage: CIImage? = depthBuffer != nil ? CIImage(cvPixelBuffer: depthBuffer!) : nil
+        var depthImage: CIImage? = nil
+        if let depthMap = frame.sceneDepth?.depthMap ?? frame.smoothedSceneDepth?.depthMap {
+            depthImage = CIImage(cvPixelBuffer: depthMap)
+        } else {
+            print("Depth data not available in this ARFrame")
+        }
         
-        let depthConfidenceBuffer = frame.sceneDepth?.confidenceMap
+        let depthConfidenceBuffer = frame.sceneDepth?.confidenceMap ?? frame.smoothedSceneDepth?.confidenceMap
 //        let confidenceImage: CIImage? = depthConfidenceBuffer != nil ? CIImage(cvPixelBuffer: depthConfidenceBuffer!) : nil
         
         locationManager?.setLocationAndHeading()
