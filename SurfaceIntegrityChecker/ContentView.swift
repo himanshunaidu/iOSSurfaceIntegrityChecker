@@ -53,11 +53,11 @@ struct ContentView: View {
                 if let arResources = arResources {
                     integrity = integrityCalculator.calculateIntegrity(of: arResources)
                     // Save the dataset for future reference
-                    do {
-                        try datasetEncoder.addData(frameString: UUID().uuidString, meshBundle: arResources)
-                    } catch {
-                        print("Failed to save dataset: \(error)")
-                    }
+//                    do {
+//                        try datasetEncoder.addData(frameString: UUID().uuidString, meshBundle: arResources)
+//                    } catch {
+//                        print("Failed to save dataset: \(error)")
+//                    }
                 } else {
                     print("No AR Resources available for integrity calculation.")
                 }
@@ -70,13 +70,16 @@ struct ContentView: View {
         .padding(.bottom, 16)
         
         .sheet(isPresented: $showIntegritySheet) {
-            IntegrityResultView(integrityResult: integrityResult)
+            IntegrityResultView(integrityResult: integrityResult, arResources: arResources)
         }
     }
 }
 
 struct IntegrityResultView: View {
     @State var integrityResult: IntegrityStatus
+    @State var datasetName: String = ""
+    @State private var datasetSaveError: String? = nil
+    var arResources: MeshBundle?
     
     var body: some View {
         VStack {
@@ -90,6 +93,31 @@ struct IntegrityResultView: View {
             Picker("Status", selection: $integrityResult) {
                 ForEach(IntegrityStatus.allCases) { option in
                     Text(String(describing: option))
+                }
+            }
+            
+            TextField("Dataset Name", text: $datasetName)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .padding()
+            if let error = datasetSaveError {
+                Text("Error: \(error)")
+                    .foregroundColor(.red)
+                    .padding()
+            }
+            
+            Button("Save Result") {
+                // Action to save the result
+                if let arResources = arResources {
+                    let datasetName = datasetName.isEmpty ? UUID().uuidString : datasetName
+                    let datasetEncoder = DatasetEncoder(rootDirectoryName: "Experiment_1", directoryName: datasetName)
+                    do {
+                        try datasetEncoder.addData(frameString: UUID().uuidString, meshBundle: arResources)
+                    } catch {
+                        datasetSaveError = "Failed to save dataset: \(error)"
+                        print(datasetSaveError!)
+                    }
+                } else {
+                    print("No AR Resources available for saving.")
                 }
             }
         }
