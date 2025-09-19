@@ -18,6 +18,7 @@ struct ARViewControllerContainer: UIViewControllerRepresentable {
     var overlaySize: CGSize
     var showDebug: Bool = false
     var arResourceUpdateCallback: (MeshBundle?) -> Void
+    var locationManager: LocationManager = LocationManager()
     
     func makeUIViewController(context: Context) -> ARHostViewController {
         let vc = ARHostViewController()
@@ -25,6 +26,7 @@ struct ARViewControllerContainer: UIViewControllerRepresentable {
         vc.overlaySize = overlaySize
         vc.showDebug = showDebug
         vc.arResourceUpdateCallback = arResourceUpdateCallback
+        vc.locationManager = locationManager
         return vc
     }
     
@@ -57,6 +59,10 @@ struct MeshBundle {
     
     var cameraTransform: simd_float4x4?
     var cameraIntrinsics: simd_float3x3?
+    var cameraImage: CIImage?
+    var depthImage: CIImage?
+    var confidenceBuffer: CVPixelBuffer?
+    var location: CLLocation?
 }
 
 final class ARHostViewController: UIViewController, ARSessionDelegate {
@@ -66,6 +72,7 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
     var overlaySize: CGSize = CGSize(width: 160, height: 160)
     var showDebug: Bool = true
     var arResourceUpdateCallback: ((MeshBundle?) -> Void)?
+    var locationManager: LocationManager?
     
     // MARK: - Views
     private let arView: ARView = {
@@ -209,10 +216,27 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
         let cameraTransform = frame.camera.transform
         let cameraIntrinsics = frame.camera.intrinsics
         
+        let depthBuffer = frame.sceneDepth?.depthMap
+        let depthImage: CIImage? = depthBuffer != nil ? CIImage(cvPixelBuffer: depthBuffer!) : nil
+        
+        let depthConfidenceBuffer = frame.sceneDepth?.confidenceMap
+//        let confidenceImage: CIImage? = depthConfidenceBuffer != nil ? CIImage(cvPixelBuffer: depthConfidenceBuffer!) : nil
+        
+        locationManager?.setLocationAndHeading()
+        var location: CLLocation? = nil
+        if let latitude = locationManager?.latitude,
+           let longitude = locationManager?.longitude {
+            location = CLLocation(latitude: latitude, longitude: longitude)
+        }
+        
         processQueue.async { [weak self] in
             self?.processOverlay(pixelBuffer: pixelBuffer, exifOrientation: exif, cameraTransform: cameraTransform, cameraIntrinsics: cameraIntrinsics)
             self?.floorBundle?.cameraTransform = cameraTransform
             self?.floorBundle?.cameraIntrinsics = cameraIntrinsics
+            self?.floorBundle?.cameraImage = cIImage
+            self?.floorBundle?.depthImage = depthImage
+            self?.floorBundle?.confidenceBuffer = depthConfidenceBuffer
+            self?.floorBundle?.location = location
         }
     }
     

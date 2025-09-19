@@ -154,6 +154,19 @@ class DatasetEncoder {
         if let cameraIntrinsics = meshBundle.cameraIntrinsics {
             self.writeIntrinsics(cameraIntrinsics: cameraIntrinsics)
         }
+        if let cameraImage = meshBundle.cameraImage {
+            self.rgbEncoder.save(ciImage: cameraImage, frameString: frameString)
+        }
+        if let depthImage = meshBundle.depthImage {
+            self.depthEncoder.save(ciImage: depthImage, frameString: frameString)
+        }
+        if let confidenceBuffer = meshBundle.confidenceBuffer {
+            self.confidenceEncoder.encodeFrame(frame: confidenceBuffer, frameString: frameString)
+        }
+        if let location = meshBundle.location {
+            let locationData: LocationData = LocationData(timestamp: timestamp, latitude: location.coordinate.latitude, longitude: location.coordinate.longitude)
+            self.locationEncoder.add(locationData: locationData, frameString: frameString)
+        }
         self.meshEncoder.save(meshBundle: meshBundle, frameString: frameString)
         
         savedFrames = savedFrames + 1
