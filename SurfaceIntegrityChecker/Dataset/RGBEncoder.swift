@@ -14,31 +14,41 @@ class RGBEncoder {
         case ok
         case fileCreationError
     }
-    private let baseDirectory: URL
+    private var baseDirectory: URL
     public var status: Status = Status.ok
     
     init(outDirectory: URL) {
         self.baseDirectory = outDirectory
+        self.createDirectoryIfNeeded()
+    }
+    
+//    func updateBaseDirectory(_ outDirectory: URL) {
+//        guard self.baseDirectory != outDirectory else { return }
+//        self.baseDirectory = outDirectory
+//        self.createDirectoryIfNeeded()
+//    }
+    
+    private func createDirectoryIfNeeded() {
         do {
-            try FileManager.default.createDirectory(at: outDirectory.absoluteURL, withIntermediateDirectories: true, attributes: nil)
+            try FileManager.default.createDirectory(at: self.baseDirectory.absoluteURL, withIntermediateDirectories: true, attributes: nil)
         } catch let error {
             print("Could not create folder. \(error.localizedDescription)")
             status = Status.fileCreationError
         }
     }
     
-    func save(ciImage: CIImage, frameNumber: UUID) {
-        let filename = String(frameNumber.uuidString)
+    func save(ciImage: CIImage, frameString: String) {
+        let filename = String(frameString)
         let image = UIImage(ciImage: ciImage)
         guard let data = image.pngData() else {
-            print("Could not convert CIImage to PNG data for frame \(frameNumber).")
+            print("Could not convert CIImage to PNG data for frame \(frameString).")
             return
         }
         let path = self.baseDirectory.absoluteURL.appendingPathComponent(filename, isDirectory: false).appendingPathExtension("png")
         do {
             try data.write(to: path)
         } catch let error {
-            print("Could not save depth image \(frameNumber). \(error.localizedDescription)")
+            print("Could not save rgb image \(frameString). \(error.localizedDescription)")
         }
     }
 }

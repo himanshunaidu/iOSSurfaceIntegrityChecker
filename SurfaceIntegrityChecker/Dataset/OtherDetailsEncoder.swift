@@ -20,12 +20,29 @@ class OtherDetailsEncoder {
         case ok
         case fileCreationError
     }
-    private let path: URL
-    let fileHandle: FileHandle
+    private var path: URL
+    var fileHandle: FileHandle
     public var status: Status = Status.ok
     
     init(url: URL) {
         self.path = url
+        self.fileHandle = FileHandle.standardOutput // Temporary assignment
+        self.setupFileHander()
+    }
+    
+//    func updatePath(_ url: URL) {
+//        guard self.path != url else {
+//            return
+//        }
+//        // Close the existing file handle
+//        self.done()
+//        // Update the path and create a new file handle
+//        self.path = url
+//        self.setupFileHander()
+//    }
+    
+    private func setupFileHander() {
+        FileManager.default.createFile(atPath: self.path.absoluteString,  contents:Data("".utf8), attributes: nil)
         do {
             try "".write(to: self.path, atomically: true, encoding: .utf8)
             self.fileHandle = try FileHandle(forWritingTo: self.path)
@@ -36,8 +53,8 @@ class OtherDetailsEncoder {
         }
     }
     
-    func add(otherDetails: OtherDetailsData, frameNumber: UUID) {
-        let frameNumber = String(frameNumber.uuidString)
+    func add(otherDetails: OtherDetailsData, frameString: String) {
+        let frameNumber = String(frameString)
         let deviceOrientationString: String = String(otherDetails.deviceOrientation.rawValue)
         let originalWidth = String(Float(otherDetails.originalSize.width))
         let originalHeight = String(Float(otherDetails.originalSize.height))

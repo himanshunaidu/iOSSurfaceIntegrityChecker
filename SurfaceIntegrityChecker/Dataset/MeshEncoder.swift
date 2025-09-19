@@ -37,20 +37,30 @@ class MeshEncoder {
         case ok
         case fileCreationError
     }
-    private let baseDirectory: URL
+    private var baseDirectory: URL
     public var status: Status = Status.ok
 
     init(outDirectory: URL) {
         self.baseDirectory = outDirectory
+        createDirectoryIfNeeded()
+    }
+    
+//    func updateBaseDirectory(_ outDirectory: URL) {
+//        guard self.baseDirectory != outDirectory else { return }
+//        self.baseDirectory = outDirectory
+//        createDirectoryIfNeeded()
+//    }
+    
+    private func createDirectoryIfNeeded() {
         do {
-            try FileManager.default.createDirectory(at: outDirectory.absoluteURL, withIntermediateDirectories: true, attributes: nil)
+            try FileManager.default.createDirectory(at: self.baseDirectory.absoluteURL, withIntermediateDirectories: true, attributes: nil)
         } catch let error {
             print("Could not create folder. \(error.localizedDescription)")
             status = Status.fileCreationError
         }
     }
 
-    func save(meshBundle: MeshBundle, frameNumber: UUID) {
+    func save(meshBundle: MeshBundle, frameString: String) {
         var ply: String
         
         let greenEntity = meshBundle.greenEntity
@@ -80,7 +90,7 @@ class MeshEncoder {
         }
         
         do {
-            let filename = String(frameNumber.uuidString)
+            let filename = frameString
             let path = baseDirectory.appendingPathComponent(filename, isDirectory: false).appendingPathExtension("ply")
             
             try ply.data(using: .utf8)?.write(to: path, options: .atomic)

@@ -14,12 +14,28 @@ class CameraTransformEncoder {
         case ok
         case fileCreationError
     }
-    private let path: URL
-    let fileHandle: FileHandle
+    private var path: URL
+    var fileHandle: FileHandle
     public var status: Status = Status.ok
     
     init(url: URL) {
         self.path = url
+        fileHandle = FileHandle.standardOutput // Temporary assignment
+        self.setupFileHander()
+    }
+    
+//    func updatePath(_ url: URL) {
+//        guard self.path != url else {
+//            return
+//        }
+//        // Close the existing file handle
+//        self.done()
+//        // Update the path and create a new file handle
+//        self.path = url
+//        self.setupFileHander()
+//    }
+    
+    private func setupFileHander() {
         do {
             try "".write(to: self.path, atomically: true, encoding: .utf8)
             self.fileHandle = try FileHandle(forWritingTo: self.path)
@@ -30,14 +46,14 @@ class CameraTransformEncoder {
         }
     }
     
-    func add(transform: simd_float4x4, timestamp: TimeInterval, frameNumber: UUID) {
+    func add(transform: simd_float4x4, timestamp: TimeInterval, frameString: String) {
         let rotationX = transform.columns.0
         let rotationY = transform.columns.1
         let rotationZ = transform.columns.2
         let translation = transform.columns.3
         
-        let frameNumber = String(frameNumber.uuidString)
-        let line = "\(timestamp), \(frameNumber), \(rotationX.x), \(rotationX.y), \(rotationX.z), \(rotationY.x), \(rotationY.y), \(rotationY.z), \(rotationZ.x), \(rotationZ.y), \(rotationZ.z), \(translation.x), \(translation.y), \(translation.z)\n"
+//        let fram
+        let line = "\(timestamp), \(frameString), \(rotationX.x), \(rotationX.y), \(rotationX.z), \(rotationY.x), \(rotationY.y), \(rotationY.z), \(rotationZ.x), \(rotationZ.y), \(rotationZ.z), \(translation.x), \(translation.y), \(translation.z)\n"
         self.fileHandle.write(line.data(using: .utf8)!)
     }
     

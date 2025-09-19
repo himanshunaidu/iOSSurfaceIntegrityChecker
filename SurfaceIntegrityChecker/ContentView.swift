@@ -18,7 +18,7 @@ struct ContentView: View {
     @State var integrityResult: Bool = false
     
     private var integrityCalculator: IntegrityCalculator = IntegrityCalculator()
-    private var datasetEncoder = DatasetEncoder()
+    private var datasetEncoder = DatasetEncoder(rootDirectoryName: "Experiment_1")
     
     var body: some View {
         ARViewControllerContainer(
@@ -37,7 +37,11 @@ struct ContentView: View {
                 if let arResources = arResources {
                     integrity = integrityCalculator.calculateIntegrity(of: arResources)
                     // Save the dataset for future reference
-                    datasetEncoder.addData(frameId: UUID(), meshBundle: arResources)
+                    do {
+                        try datasetEncoder.addData(frameString: UUID().uuidString, meshBundle: arResources)
+                    } catch {
+                        print("Failed to save dataset: \(error)")
+                    }
                 } else {
                     print("No AR Resources available for integrity calculation.")
                 }

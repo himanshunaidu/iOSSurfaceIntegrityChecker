@@ -13,23 +13,33 @@ class ConfidenceEncoder {
         case ok
         case fileCreationError
     }
-    private let baseDirectory: URL
+    private var baseDirectory: URL
     private let ciContext: CIContext
     public var status: Status = Status.ok
 
     init(outDirectory: URL) {
         self.baseDirectory = outDirectory
         self.ciContext = CIContext()
+        self.createDirectoryIfNeeded()
+    }
+    
+//    func updateBaseDirectory(_ outDirectory: URL) {
+//        guard self.baseDirectory != outDirectory else { return }
+//        self.baseDirectory = outDirectory
+//        self.createDirectoryIfNeeded()
+//    }
+    
+    private func createDirectoryIfNeeded() {
         do {
-            try FileManager.default.createDirectory(at: outDirectory.absoluteURL, withIntermediateDirectories: true, attributes: nil)
+            try FileManager.default.createDirectory(at: self.baseDirectory.absoluteURL, withIntermediateDirectories: true, attributes: nil)
         } catch let error {
             print("Could not create confidence folder. \(error.localizedDescription)")
             status = Status.fileCreationError
         }
     }
 
-    func encodeFrame(frame: CVPixelBuffer, frameNumber: UUID) {
-        let filename = String(frameNumber.uuidString)
+    func encodeFrame(frame: CVPixelBuffer, frameString: String) {
+        let filename = String(frameString)
         let image = CIImage(cvPixelBuffer: frame)
         assert(CVPixelBufferGetPixelFormatType(frame) == kCVPixelFormatType_OneComponent8)
         let framePath = self.baseDirectory.absoluteURL.appendingPathComponent(filename, isDirectory: false).appendingPathExtension("png")
