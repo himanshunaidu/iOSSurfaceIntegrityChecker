@@ -39,7 +39,7 @@ struct ARViewContainer: UIViewRepresentable {
     func makeUIView(context: Context) -> ARView {
         let config = ARWorldTrackingConfiguration()
         config.worldAlignment = .gravityAndHeading
-        config.planeDetection = [.horizontal]
+//        config.planeDetection = [.horizontal]
         config.sceneReconstruction = .meshWithClassification
         config.environmentTexturing = .automatic
         assignFrameSemantics(config: config)

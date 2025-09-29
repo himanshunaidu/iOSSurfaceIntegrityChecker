@@ -51,4 +51,29 @@ class DepthEncoder {
             print("Could not save depth image \(frameString). \(error.localizedDescription)")
         }
     }
+    
+    func save(frame: CVPixelBuffer, frameString: String) {
+        let filename = String(frameString)
+        let encoder = self.convert(buffer: frame)
+        let data = encoder.fileContents()
+        let path = self.baseDirectory.absoluteURL.appendingPathComponent(filename, isDirectory: false).appendingPathExtension("png")
+        do {
+            try data?.write(to: path)
+        } catch let error {
+            print("Could not save depth image \(frameString). \(error.localizedDescription)")
+        }
+    }
+    
+    private func convert(buffer: CVPixelBuffer) -> PngEncoder {
+        assert(CVPixelBufferGetPixelFormatType(buffer) == kCVPixelFormatType_DepthFloat32)
+        let height = CVPixelBufferGetHeight(buffer)
+        let width = CVPixelBufferGetWidth(buffer)
+        CVPixelBufferLockBaseAddress(buffer, CVPixelBufferLockFlags.readOnly)
+        let inBase = CVPixelBufferGetBaseAddress(buffer)
+        let inPixelData = inBase!.assumingMemoryBound(to: Float32.self)
+        
+        let out = PngEncoder.init(depth: inPixelData, width: Int32(width), height: Int32(height))!
+        CVPixelBufferUnlockBaseAddress(buffer, CVPixelBufferLockFlags(rawValue: 0))
+        return out
+    }
 }

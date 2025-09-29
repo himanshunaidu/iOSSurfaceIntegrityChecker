@@ -15,7 +15,7 @@ struct ARPointCloudViewContainer: UIViewRepresentable {
         let config = ARWorldTrackingConfiguration()
         config.worldAlignment = .gravityAndHeading
         config.sceneReconstruction = .meshWithClassification
-        config.planeDetection = [.horizontal]
+//        config.planeDetection = [.horizontal]
         view.session.run(config)
 
         // ✅ Built-in yellow point cloud

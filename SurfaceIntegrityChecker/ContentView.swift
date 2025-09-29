@@ -37,7 +37,7 @@ struct ContentView: View {
     @State var integrityResult: IntegrityStatus = .intact
     
     private var integrityCalculator: IntegrityCalculator = IntegrityCalculator()
-//    private var datasetEncoder = DatasetEncoder(rootDirectoryName: "Experiment_1")
+//    private var datasetEncoder = DatasetEncoder(rootDirectoryName: "Experiment_4")
     
     var body: some View {
         ARViewControllerContainer(
@@ -86,7 +86,7 @@ struct ContentView: View {
 }
 
 struct IntegrityResultView: View {
-    var ROOT_DIRECTORY_NAME = "Experiment_1"
+    var ROOT_DIRECTORY_NAME = "Experiment_4"
     
     @State var datasetName: String = ""
     @State private var datasetSaveSuccess: Bool = false

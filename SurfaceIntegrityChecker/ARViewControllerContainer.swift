@@ -64,7 +64,7 @@ struct MeshBundle {
     var cameraTransform: simd_float4x4?
     var cameraIntrinsics: simd_float3x3?
     var cameraImage: CIImage?
-    var depthImage: CIImage?
+    var depthBuffer: CVPixelBuffer?
     var confidenceBuffer: CVPixelBuffer?
     var location: CLLocation?
 }
@@ -222,12 +222,7 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
         let cameraTransform = frame.camera.transform
         let cameraIntrinsics = frame.camera.intrinsics
         
-        var depthImage: CIImage? = nil
-        if let depthMap = frame.sceneDepth?.depthMap ?? frame.smoothedSceneDepth?.depthMap {
-            depthImage = CIImage(cvPixelBuffer: depthMap)
-        } else {
-            print("Depth data not available in this ARFrame")
-        }
+        let depthBuffer = frame.sceneDepth?.depthMap ?? frame.smoothedSceneDepth?.depthMap
         
         let depthConfidenceBuffer = frame.sceneDepth?.confidenceMap ?? frame.smoothedSceneDepth?.confidenceMap
 //        let confidenceImage: CIImage? = depthConfidenceBuffer != nil ? CIImage(cvPixelBuffer: depthConfidenceBuffer!) : nil
@@ -244,7 +239,7 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
             self?.floorBundle?.cameraTransform = cameraTransform
             self?.floorBundle?.cameraIntrinsics = cameraIntrinsics
             self?.floorBundle?.cameraImage = cIImage
-            self?.floorBundle?.depthImage = depthImage
+            self?.floorBundle?.depthBuffer = depthBuffer
             self?.floorBundle?.confidenceBuffer = depthConfidenceBuffer
             self?.floorBundle?.location = location
         }
@@ -531,7 +526,7 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
         let meanNormal = simd_float3(0, 1, 0) // Assume up vector for floor
         
         // Step 3: Split triangles based on deviation
-        let thresholdDegrees: Float = 5.0
+        let thresholdDegrees: Float = 10.0
         var normalTriangles: [(SIMD3<Float>, SIMD3<Float>, SIMD3<Float>)] = []
         var deviantTriangles: [(SIMD3<Float>, SIMD3<Float>, SIMD3<Float>)] = []
         

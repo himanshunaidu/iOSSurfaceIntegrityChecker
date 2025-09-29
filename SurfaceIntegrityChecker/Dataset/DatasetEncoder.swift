@@ -157,8 +157,8 @@ class DatasetEncoder {
         if let cameraImage = meshBundle.cameraImage {
             self.rgbEncoder.save(ciImage: cameraImage, frameString: frameString)
         }
-        if let depthImage = meshBundle.depthImage {
-            self.depthEncoder.save(ciImage: depthImage, frameString: frameString)
+        if let depthBuffer = meshBundle.depthBuffer {
+            self.depthEncoder.save(frame: depthBuffer, frameString: frameString)
         }
         if let confidenceBuffer = meshBundle.confidenceBuffer {
             self.confidenceEncoder.encodeFrame(frame: confidenceBuffer, frameString: frameString)
