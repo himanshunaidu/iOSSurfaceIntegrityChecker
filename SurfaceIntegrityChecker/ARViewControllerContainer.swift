@@ -471,36 +471,36 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
                     let v2 = worldVertex(at: Int(face[2]), geometry: geometry, transform: transform)
                     
                     // MARK: If the triangle centroid corresponds to a segmentation pixel that has value in selectionClasses, keep it
-//                    let c = (v0 + v1 + v2) / 3.0
-//                    counts["total", default: 0] += 1
-//                    guard let px = projectWorldToPixel(
-//                        c,
-//                        cameraTransform: cameraTransform,
-//                        intrinsics: cameraIntrinsics,
-//                        imageSize: segmentationLabelImage.extent.size) else {
-//                        counts["projectFailed", default: 0] += 1
-//                        continue
-//                    }
-//                    // Update pixel range
-//                    if px.x < pxRange[0] { pxRange[0] = CGFloat(px.x) }
-//                    if px.y < pxRange[1] { pxRange[1] = CGFloat(px.y) }
-//                    if px.x > pxRange[2] { pxRange[2] = CGFloat(px.x) }
-//                    if px.y > pxRange[3] { pxRange[3] = CGFloat(px.y) }
-//                    guard let value = sampleMask(
-//                        segmentationPixelBuffer, at: px,
-//                        width: width, height: height, bytesPerRow: bpr) else {
-////                        print("Failed to sample mask at pixel \(px)")
-//                        counts["sampleFailed", default: 0] += 1
-//                        continue
-//                    }
-//                    uniqueValueFrequencies[value, default: 0] += 1
-//                    // MARK: Hard-code the match for now
-//                    if value != 1 {
-////                        print("Skipping triangle at \(px) with label \(value)")
-//                        counts["classMismatch", default: 0] += 1
-//                        continue
-//                    } else {
-//                    }
+                    let c = (v0 + v1 + v2) / 3.0
+                    counts["total", default: 0] += 1
+                    guard let px = projectWorldToPixel(
+                        c,
+                        cameraTransform: cameraTransform,
+                        intrinsics: cameraIntrinsics,
+                        imageSize: segmentationLabelImage.extent.size) else {
+                        counts["projectFailed", default: 0] += 1
+                        continue
+                    }
+                    // Update pixel range
+                    if px.x < pxRange[0] { pxRange[0] = CGFloat(px.x) }
+                    if px.y < pxRange[1] { pxRange[1] = CGFloat(px.y) }
+                    if px.x > pxRange[2] { pxRange[2] = CGFloat(px.x) }
+                    if px.y > pxRange[3] { pxRange[3] = CGFloat(px.y) }
+                    guard let value = sampleMask(
+                        segmentationPixelBuffer, at: px,
+                        width: width, height: height, bytesPerRow: bpr) else {
+//                        print("Failed to sample mask at pixel \(px)")
+                        counts["sampleFailed", default: 0] += 1
+                        continue
+                    }
+                    uniqueValueFrequencies[value, default: 0] += 1
+                    // MARK: Hard-code the match for now
+                    if value != 1 {
+//                        print("Skipping triangle at \(px) with label \(value)")
+                        counts["classMismatch", default: 0] += 1
+                        continue
+                    } else {
+                    }
                     counts["kept", default: 0] += 1
                     
                     triangles.append((v0, v1, v2))
