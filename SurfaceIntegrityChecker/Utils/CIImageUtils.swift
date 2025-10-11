@@ -104,33 +104,41 @@ struct CIImageUtils {
                 // Source wider than dest (e.g. 1920×1440 -> 640×640):
                 // Step 1 used: scale = destH / srcH ; newWidth = srcW * scale ; then center-crop X.
                 let scale = croppedSize.height / originalSize.height
-                let newWidth = originalSize.width * scale
-                let xOffset = (croppedSize.width - newWidth) / 2.0  // negative
-
+                
+                // Scale up uniformly to original size of smaller dimension (1/scale)
+                let inv = 1.0 / scale
+                let resized = mask.transformed(by: CGAffineTransform(scaleX: inv, y: inv))
+                
+                let newWidth = originalSize.width
+                let xOffset = (resized.extent.width - newWidth) / 2
+                
                 // Put the 640×640 mask back into an (newWidth × croppedH) canvas, centered
-                let canvas = CGRect(x: 0, y: 0, width: newWidth, height: croppedSize.height)
-                let translated = mask.transformed(by: CGAffineTransform(translationX: -xOffset, y: 0)) // -xOffset is positive
+                let canvas = CGRect(x: 0, y: 0, width: newWidth, height: originalSize.height)
+                let translated = resized.transformed(by: CGAffineTransform(translationX: -xOffset, y: 0)) // -xOffset is positive
                 let background = CIImage(color: .clear).cropped(to: canvas)
                 let composed = translated.composited(over: background)
 
-                // Scale up uniformly to original size (1/scale)
-                let inv = 1.0 / scale
-                return composed.transformed(by: CGAffineTransform(scaleX: inv, y: inv))
+                return composed
             } else {
                 // Source taller than dest (crop Y)
                 let scale = croppedSize.width / originalSize.width
-                let newHeight = originalSize.height * scale
-                let yOffset = (croppedSize.height - newHeight) / 2.0
-
-                let canvas = CGRect(x: 0, y: 0, width: croppedSize.width, height: newHeight)
-                let translated = mask.transformed(by: CGAffineTransform(translationX: 0, y: -yOffset))
+                
+                let inv = 1.0 / scale
+                let resized = mask.transformed(by: CGAffineTransform(scaleX: inv, y: inv))
+                
+                let newHeight = originalSize.height
+                let yOffset = (resized.extent.height - newHeight) / 2
+                
+                let canvas = CGRect(x: 0, y: 0, width: originalSize.width, height: newHeight)
+                let translated = resized.transformed(by: CGAffineTransform(translationX: 0,
+                                                                            y: -yOffset)) // -yOffset is positive
                 let background = CIImage(color: .clear).cropped(to: canvas)
                 let composed = translated.composited(over: background)
-
-                let inv = 1.0 / scale
-                return composed.transformed(by: CGAffineTransform(scaleX: inv, y: inv))
+                
+                return composed
             }
         }
+    
     
     /**
      This function returns the transformation to revert the effect of `resizeWithAspectThenCrop`.

@@ -99,7 +99,6 @@ final class SegmentationFrameProcessor: ObservableObject {
         self.grayscaleToColorMasker.grayscaleValues = self.selectionClassGrayscaleValues
         self.grayscaleToColorMasker.colorValues =  self.selectionClassColors
         let colorMask = self.grayscaleToColorMasker.outputImage
-//        print("Segmentation Mask Size and Extent: \(mask.extent.size), \(mask.extent)")
         
         let inverse = orientation.inverted
         mask = mask.oriented(inverse)
@@ -115,7 +114,6 @@ final class SegmentationFrameProcessor: ObservableObject {
             return (label: resizedMask, color: resizedColorMask)
         }
         
-//        print("Resized Mask Size and Extent: \(resizedMask.extent.size), \(resizedMask.extent)")
         return (label: resizedMask, color: nil)
     }
     

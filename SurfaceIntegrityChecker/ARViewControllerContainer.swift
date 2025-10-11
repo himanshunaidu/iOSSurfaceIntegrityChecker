@@ -95,6 +95,16 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
         iv.translatesAutoresizingMaskIntoConstraints = false
         return iv
     }()
+    private let damageOverlayImageView: UIImageView = {
+        let iv = UIImageView()
+        iv.contentMode = .scaleAspectFit
+        iv.clipsToBounds = true
+        iv.layer.cornerRadius = 12
+        iv.backgroundColor = UIColor(white: 0, alpha: 0.35)
+        iv.isUserInteractionEnabled = false
+        iv.translatesAutoresizingMaskIntoConstraints = false
+        return iv
+    }()
     
     // MARK: - Processing
     private let segmentationFrameProcessor: SegmentationFrameProcessor = SegmentationFrameProcessor()
@@ -102,6 +112,8 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
     private var segmentationLabelImage: CIImage?
     private var cameraTransform: simd_float4x4?
     private var cameraIntrinsics: simd_float3x3?
+    
+    private let damageDetectionFrameProcessor: DamageDetectionFrameProcessor = DamageDetectionFrameProcessor()
     
     private let ciContext = CIContext()
     private let processQueue = DispatchQueue(label: "ar.host.process.queue")
@@ -128,6 +140,8 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
 
         arView.addSubview(overlayImageView)
         applyOverlayLayoutIfNeeded()
+        arView.addSubview(damageOverlayImageView)
+        applyDamageOverlayLayoutIfNeeded()
         applyDebugIfNeeded()
         
 //        arView.addSubview(analyzeButton)
@@ -191,6 +205,19 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
             overlayImageView.centerXAnchor.constraint(equalTo: view.centerXAnchor)
         ])
     }
+    
+    func applyDamageOverlayLayoutIfNeeded() {
+        NSLayoutConstraint.deactivate(damageOverlayImageView.constraints)
+        // Pin to top-trailing with given size and padding
+//        let pad: CGFloat = 16
+        NSLayoutConstraint.activate([
+            damageOverlayImageView.topAnchor.constraint(equalTo: view.topAnchor),
+            damageOverlayImageView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+//            damageOverlayImageView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+//            damageOverlayImageView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
+            damageOverlayImageView.centerXAnchor.constraint(equalTo: view.centerXAnchor)
+        ])
+    }
 
     func applyDebugIfNeeded() {
         if showDebug {
@@ -215,8 +242,13 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
         guard now.timeIntervalSince(lastProcess) >= minInterval else { return }
         lastProcess = now
 //
-        let pixelBuffer = frame.capturedImage
-        let exif = exifOrientationForCurrentDevice()
+//        let pixelBuffer = frame.capturedImage
+        let exif: CGImagePropertyOrientation = exifOrientationForCurrentDevice()
+        
+        guard let uiImage = UIImage(named: "1e8fde45bd_frame_006840_leftImg8bit") else {
+            fatalError("Asset not found")
+        }
+        let pixelBuffer = CIImageUtils.toPixelBuffer(CIImage(image: uiImage)!)!
         
         let cIImage = CIImage(cvPixelBuffer: pixelBuffer)
         let cameraTransform = frame.camera.transform
@@ -363,10 +395,26 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
 
             segmentationColor = segmentationColor.oriented(exifOrientation)
             guard let cg = ciContext.createCGImage(segmentationColor, from: segmentationColor.extent) else { return }
-            let ui = UIImage(cgImage: cg)
+//            let ui = UIImage(cgImage: cg)
+            var ci = CIImage(cvPixelBuffer: pixelBuffer)
+            ci = ci.oriented(exifOrientation)
+            let ui = UIImage(ciImage: ci)
+            
+            let damageDetectionResults = damageDetectionFrameProcessor.processRequest(with: pixelBuffer, orientation: exifOrientation)
+            let damageDetectionImage = damageDetectionResults?.resultImage
+            var damageUI: UIImage? = nil
+            var cgDamage: CGImage? = nil
+            if var damageDetectionImage = damageDetectionImage {
+                damageDetectionImage = damageDetectionImage.oriented(exifOrientation)
+                cgDamage = ciContext.createCGImage(damageDetectionImage, from: damageDetectionImage.extent)
+            }
+            if let cgDamage = cgDamage {
+                damageUI = UIImage(cgImage: cgDamage)
+            }
 
             DispatchQueue.main.async { [weak self] in
                 self?.overlayImageView.image = ui
+                self?.damageOverlayImageView.image = damageUI
             }
         }
     }
