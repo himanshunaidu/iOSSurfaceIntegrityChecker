@@ -242,13 +242,8 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
         guard now.timeIntervalSince(lastProcess) >= minInterval else { return }
         lastProcess = now
 //
-//        let pixelBuffer = frame.capturedImage
+        let pixelBuffer = frame.capturedImage
         let exif: CGImagePropertyOrientation = exifOrientationForCurrentDevice()
-        
-        guard let uiImage = UIImage(named: "1e8fde45bd_frame_006840_leftImg8bit") else {
-            fatalError("Asset not found")
-        }
-        let pixelBuffer = CIImageUtils.toPixelBuffer(CIImage(image: uiImage)!)!
         
         let cIImage = CIImage(cvPixelBuffer: pixelBuffer)
         let cameraTransform = frame.camera.transform
@@ -395,10 +390,7 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
 
             segmentationColor = segmentationColor.oriented(exifOrientation)
             guard let cg = ciContext.createCGImage(segmentationColor, from: segmentationColor.extent) else { return }
-//            let ui = UIImage(cgImage: cg)
-            var ci = CIImage(cvPixelBuffer: pixelBuffer)
-            ci = ci.oriented(exifOrientation)
-            let ui = UIImage(ciImage: ci)
+            let ui = UIImage(cgImage: cg)
             
             let damageDetectionResults = damageDetectionFrameProcessor.processRequest(with: pixelBuffer, orientation: exifOrientation)
             let damageDetectionImage = damageDetectionResults?.resultImage

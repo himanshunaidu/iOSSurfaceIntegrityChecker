@@ -122,19 +122,18 @@ final class DamageDetectionFrameProcessor: ObservableObject {
             }
             var damageDetectionResults: [DamageDetectionResult] = detectionResult.map { observation in
                 let topLabel = observation.labels.first
-//                print("Detected \(topLabel?.identifier ?? "N/A") with confidence \(topLabel?.confidence ?? 0.0) at \(observation.boundingBox)")
                 return DamageDetectionResult(
                     boundingBox: observation.boundingBox,
                     confidence: topLabel?.confidence ?? 0.0,
                     label: topLabel?.identifier ?? "N/A"
                 )
             }
-            let containerResult = DamageDetectionResult(
-                boundingBox: CGRect(x: 0.0, y: 0.99, width: 1.0, height: 0.98),
-                confidence: 1.0,
-                label: "Container"
-            )
-            damageDetectionResults.insert(containerResult, at: 0)
+//            let containerResult = DamageDetectionResult(
+//                boundingBox: CGRect(x: 0.0, y: 0.99, width: 1.0, height: 0.98),
+//                confidence: 1.0,
+//                label: "Container"
+//            )
+//            damageDetectionResults.insert(containerResult, at: 0)
             return damageDetectionResults
         } catch {
             print("Error processing detection request: \(error)")

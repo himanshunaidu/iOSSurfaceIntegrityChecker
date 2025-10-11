@@ -43,17 +43,20 @@ struct DetectedObjectRasterizer {
         UIGraphicsBeginImageContextWithOptions(size, false, 1.0)
         guard let context = UIGraphicsGetCurrentContext() else { return nil }
         
-        for object in objects {
+        for (index, object) in objects.enumerated() {
             /// Draw the bounding box
             if boundsConfig.draw {
                 let boundingBox = object.boundingBox
-                // Ignoring rectX and rectY for now
+                let rectX = CGFloat(boundingBox.origin.x) * size.width
+                let rectY = CGFloat(1 - (boundingBox.origin.y + boundingBox.size.height)) * size.height
                 let boundingBoxRect = CGRect(
-                    x: CGFloat(boundingBox.origin.x) * size.width,
-                    y: CGFloat(1 - boundingBox.origin.y) * size.height, // TODO: Remove 0.1 offset
+                    x: rectX,
+                    y: rectY, // TODO: Remove 0.1 offset
                     width: CGFloat(boundingBox.size.width) * size.width,
                     height: CGFloat(boundingBox.size.height) * size.height
                 )
+                print("Box \(index): \(boundingBox.origin.x), \(boundingBox.origin.y), \(boundingBox.size.width), \(boundingBox.size.height)")
+                print("Box corrected bounds \(index): \(CGFloat(boundingBox.origin.x) * size.width), \(CGFloat(1 - boundingBox.origin.y) * size.height), \(boundingBoxRect.width), \(boundingBoxRect.height)")
                 let boundsColor = boundsConfig.color ?? UIColor.red
                 context.setStrokeColor(boundsColor.cgColor)
                 context.setLineWidth(boundsConfig.width)
@@ -85,7 +88,7 @@ struct DetectedObjectRasterizer {
                 )
                 
                 // Draw the text directly into the current context.
-                (label as NSString).draw(in: textRect, withAttributes: attributes)
+                (String(index) as NSString).draw(in: textRect, withAttributes: attributes)
             }
         }
         let cgImage = UIGraphicsGetImageFromCurrentImageContext()?.cgImage
