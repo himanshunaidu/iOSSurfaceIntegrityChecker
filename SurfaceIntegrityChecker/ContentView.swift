@@ -7,22 +7,6 @@
 
 import SwiftUI
 
-enum IntegrityStatus: CaseIterable, Identifiable, CustomStringConvertible {
-    var id: Self { self }
-    
-    case intact
-    case compromised
-    
-    var description: String {
-        switch self {
-        case .intact:
-            return "The surface is intact."
-        case .compromised:
-            return "The surface has integrity issues."
-        }
-    }
-}
-
 struct ContentView: View {
     
     @State var arResources: MeshBundle?
@@ -33,9 +17,9 @@ struct ContentView: View {
     @State var shouldCallResourceUpdateCallback: Bool = true
     
     @State var showIntegritySheet = false
-    @State var integrityResult: IntegrityStatus = .intact
+//    @State var integrityResult: IntegrityStatus = .intact
     
-    private var integrityCalculator: IntegrityCalculator = IntegrityCalculator()
+//    private var integrityCalculator: IntegrityCalculator = IntegrityCalculator()
 //    private var datasetEncoder = DatasetEncoder(rootDirectoryName: "Experiment_4")
     
     var body: some View {
@@ -53,19 +37,19 @@ struct ContentView: View {
         VStack {
             Button("Analyze") {
                 shouldCallResourceUpdateCallback = false
-                var integrity: Bool = false
-                if let arResources = arResources {
-                    integrity = integrityCalculator.calculateIntegrity(of: arResources)
-                    // Save the dataset for future reference
+//                var integrity: Bool = false
+//                if let arResources = arResources {
+//                    integrity = integrityCalculator.calculateIntegrity(of: arResources)
+//                    // Save the dataset for future reference
 //                    do {
 //                        try datasetEncoder.addData(frameString: UUID().uuidString, meshBundle: arResources)
 //                    } catch {
 //                        print("Failed to save dataset: \(error)")
 //                    }
-                } else {
-                    print("No AR Resources available for integrity calculation.")
-                }
-                integrityResult = integrity ? .compromised : .intact
+//                } else {
+//                    print("No AR Resources available for integrity calculation.")
+//                }
+//                integrityResult = integrity ? .compromised : .intact
                 showIntegritySheet = true
             }
             .buttonStyle(.borderedProminent)
@@ -76,7 +60,7 @@ struct ContentView: View {
         .sheet(isPresented: $showIntegritySheet, onDismiss: {
             shouldCallResourceUpdateCallback = true
         }) {
-            IntegrityResultView(integrityResult: integrityResult, arResources: arResources)
+            IntegrityResultView(arResources: arResources)
         }
         .onChange(of: showIntegritySheet) { isPresented in
             shouldCallResourceUpdateCallback = !isPresented

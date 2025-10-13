@@ -12,7 +12,8 @@ struct IntegrityResultView: View {
     @State var datasetName: String = ""
     @State private var datasetSaveSuccess: Bool = false
     @State private var datasetSaveError: String? = nil
-    @State var integrityResult: IntegrityStatus
+    @State var integrityCalculator: IntegrityCalculator = IntegrityCalculator()
+    @State var integrityResults: IntegrityResults = IntegrityResults()
     @State var arResources: MeshBundle?
     
     var body: some View {
@@ -21,13 +22,15 @@ struct IntegrityResultView: View {
                 .font(.title)
                 .padding()
             
-            
+            if (arResources != nil) {
+                HostedIntegrityResultImageViewController(arResources: $arResources)
+            }
             
 //            Text((integrityResult == .intact) ? "The surface is intact." : "The surface has integrity issues.")
 //                .font(.headline)
 //                .foregroundColor((integrityResult == .intact) ? .green : .red)
 //                .padding()
-            Picker("Status", selection: $integrityResult) {
+            Picker("Status", selection: $integrityResults.integrityStatus) {
                 ForEach(IntegrityStatus.allCases) { option in
                     Text(String(describing: option))
                 }
@@ -65,6 +68,13 @@ struct IntegrityResultView: View {
                 } else {
                     print("No AR Resources available for saving.")
                 }
+            }
+        }
+        .onAppear() {
+            if let arResources = arResources,
+               let integrityResults = integrityCalculator.getIntegrityResults(arResources)
+            {
+                self.integrityResults = integrityResults
             }
         }
     }

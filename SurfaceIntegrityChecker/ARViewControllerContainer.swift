@@ -51,6 +51,8 @@ struct ARViewControllerContainer: UIViewControllerRepresentable {
 }
 
 struct MeshBundle {
+    var meshAnchors: [ARMeshAnchor] = []
+    
     let anchorEntity: AnchorEntity
     var greenEntity: ModelEntity
     var redEntity: ModelEntity
@@ -69,6 +71,7 @@ struct MeshBundle {
     var depthBuffer: CVPixelBuffer?
     var confidenceBuffer: CVPixelBuffer?
     var location: CLLocation?
+    var orientation: CGImagePropertyOrientation = .right // default to portrait (back camera)
     
     var segmentationLabelImage: CIImage?
     var damageDetectionResults: [DamageDetectionResult]?
@@ -274,6 +277,7 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
             self?.floorBundle?.depthBuffer = depthBuffer
             self?.floorBundle?.confidenceBuffer = depthConfidenceBuffer
             self?.floorBundle?.location = location
+            self?.floorBundle?.orientation = exif
         }
     }
     
@@ -474,6 +478,8 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
         let bpr = CVPixelBufferGetBytesPerRow(segmentationPixelBuffer)
         defer { CVPixelBufferUnlockBaseAddress(segmentationPixelBuffer, .readOnly) }
         
+        let meshAnchors = anchors.compactMap { $0 as? ARMeshAnchor }
+        
         if floorBundle == nil {
             let anchorEntity = AnchorEntity(world: .zero)
             let greenEntity = ModelEntity()
@@ -488,10 +494,11 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
             arView.scene.addAnchor(anchorEntity)
             let assignedColor = generateRandomColor()
             
-            floorBundle = MeshBundle(anchorEntity: anchorEntity, greenEntity: greenEntity, redEntity: redEntity, lastUpdated: 0, assignedColor: assignedColor)
+            floorBundle = MeshBundle(
+                meshAnchors: meshAnchors,
+                anchorEntity: anchorEntity, greenEntity: greenEntity, redEntity: redEntity,
+                lastUpdated: 0, assignedColor: assignedColor)
         }
-        
-        let meshAnchors = anchors.compactMap { $0 as? ARMeshAnchor }
         
         var triangles: [(SIMD3<Float>, SIMD3<Float>, SIMD3<Float>)] = []
         var triangleNormals: [SIMD3<Float>] = []

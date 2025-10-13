@@ -12,15 +12,17 @@ import SwiftUI
 class IntegrityResultImageViewController: UIViewController {
     var imageView: UIImageView! = nil
     
-    var cameraImage: UIImage?
+    var arResources: MeshBundle?
     
+    var cameraUIImage: UIImage? = nil
     var selection:[Int] = []
     var classes: [String] = []
     
-    init(cameraImage: UIImage?) {
+    init(arResources: MeshBundle?) {
         self.imageView = UIImageView()
-        self.cameraImage = cameraImage
+        self.arResources = arResources
         super.init(nibName: nil, bundle: nil)
+        self.updateResources(arResources)
     }
     
     required init?(coder: NSCoder) {
@@ -32,7 +34,7 @@ class IntegrityResultImageViewController: UIViewController {
         
         imageView.contentMode = .scaleAspectFit
         imageView.translatesAutoresizingMaskIntoConstraints = false
-        imageView.image = cameraImage
+        imageView.image = cameraUIImage
 
         view.addSubview(imageView)
 
@@ -46,20 +48,28 @@ class IntegrityResultImageViewController: UIViewController {
     }
     
     private var aspectRatio: CGFloat {
-        guard let image = cameraImage else { return 1.0 }
+        guard let image = cameraUIImage else { return 1.0 }
         return image.size.width / image.size.height
+    }
+    
+    func updateResources(_ newResources: MeshBundle?) {
+        if var newCameraImage = newResources?.cameraImage {
+//            newCameraImage = newCameraImage.oriented(newResources?.orientation ?? .right)
+            self.cameraUIImage = UIImage(ciImage: newCameraImage)
+            self.imageView.image = self.cameraUIImage
+        }
     }
 }
 
 struct HostedIntegrityResultImageViewController: UIViewControllerRepresentable{
-    @Binding var cameraImage: UIImage?
+    @Binding var arResources: MeshBundle?
     
     func makeUIViewController(context: Context) -> IntegrityResultImageViewController {
-        let viewController = IntegrityResultImageViewController(cameraImage: cameraImage)
+        let viewController = IntegrityResultImageViewController(arResources: arResources)
         return viewController
     }
     
     func updateUIViewController(_ uiViewController: IntegrityResultImageViewController, context: Context) {
-        uiViewController.imageView.image = cameraImage
+        uiViewController.updateResources(arResources)
     }
 }
