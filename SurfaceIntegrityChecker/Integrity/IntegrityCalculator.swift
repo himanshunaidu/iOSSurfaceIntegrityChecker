@@ -27,6 +27,7 @@ enum IntegrityStatus: CaseIterable, Identifiable, CustomStringConvertible {
 struct IntegrityResults {
     var triangles: [(SIMD3<Float>, SIMD3<Float>, SIMD3<Float>)] = []
     var triangleNormals: [SIMD3<Float>] = []
+    var points: [(CGPoint, CGPoint, CGPoint)] = []
     var integrityStatus: IntegrityStatus = .intact
 }
 
@@ -70,10 +71,12 @@ class IntegrityCalculator {
         
         var triangles: [(SIMD3<Float>, SIMD3<Float>, SIMD3<Float>)] = []
         var triangleNormals: [SIMD3<Float>] = []
+        var points: [(CGPoint, CGPoint, CGPoint)] = []
         
         var uniqueValueFrequencies: [UInt8: Int] = [:]
         var counts = ["total": 0, "projectFailed": 0, "sampleFailed": 0, "classMismatch": 0, "kept": 0]
         
+        print("Processing \(meshAnchors.count) mesh anchors for integrity results...")
         for meshAnchor in meshAnchors {
             // Next step: Analyze this mesh anchor for height anomalies
             let geometry = meshAnchor.geometry
@@ -137,6 +140,15 @@ class IntegrityCalculator {
                     let normal = normalize(cross(edge1, edge2))
                     
                     triangleNormals.append(normal)
+                    
+                    let point = [v0, v1, v2].map {
+                        projectWorldToPixel(
+                            $0,
+                            cameraTransform: cameraTransform,
+                            intrinsics: cameraIntrinsics,
+                            imageSize: segmentationLabelImage.extent.size) ?? CGPoint(x: -1, y: -1)
+                    }
+                    points.append( (point[0], point[1], point[2]) )
                 }
             }
         }
@@ -146,6 +158,7 @@ class IntegrityCalculator {
         return IntegrityResults(
             triangles: triangles,
             triangleNormals: triangleNormals,
+            points: points,
             integrityStatus: .intact
         )
     }
