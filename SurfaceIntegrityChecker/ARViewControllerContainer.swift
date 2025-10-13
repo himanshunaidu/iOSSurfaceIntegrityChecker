@@ -393,7 +393,8 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
 //            edges.intensity = 1.5
 //            let output = edges.outputImage ?? cropped
 
-            segmentationColor = segmentationColor.oriented(exifOrientation)
+//            segmentationColor = segmentationColor.oriented(exifOrientation)
+            segmentationColor = segmentationColor.transformed(by: CGImagePropertyOrientation.right.toUpTransform(for: segmentationColor.extent.size))
             guard let cg = ciContext.createCGImage(segmentationColor, from: segmentationColor.extent) else { return }
             let ui = UIImage(cgImage: cg)
             
@@ -408,6 +409,21 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
             if let cgDamage = cgDamage {
                 damageUI = UIImage(cgImage: cgDamage)
             }
+            
+//            let localImage = UIImage(named: "1e8fde45bd_frame_006840_leftImg8bit_up_mirrored")
+//            var localFinalImage: UIImage? = nil
+//            if let localImage = localImage {
+//                let localCIImage = CIImage(image: localImage)
+//                if var localCIImage = localCIImage {
+////                    print("Before transformation Local Image Size and Extent: \(localImage.size), \(localCIImage.extent)")
+//                    localCIImage = localCIImage.transformed(by: CGImagePropertyOrientation.upMirrored.toUpTransform(for: localCIImage.extent.size))
+////                    localCIImage = localCIImage.oriented(.right)
+//                    if let cg = ciContext.createCGImage(localCIImage, from: localCIImage.extent) {
+//                        localFinalImage = UIImage(cgImage: cg)
+////                        print("After transformation Local Image Size and Extent: \(localFinalImage?.size), \(localCIImage.extent)")
+//                    }
+//                }
+//            }
 
             DispatchQueue.main.async { [weak self] in
                 self?.overlayImageView.image = ui
@@ -512,7 +528,7 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
                     let classification = ARMeshClassification(rawValue: classificationValue) ?? .none
                     
                     // We're interested in floor-like horizontal surfaces
-                    guard classification == .floor else { continue }
+//                    guard classification == .floor else { continue }
 //
                     let v0 = worldVertex(at: Int(face[0]), geometry: geometry, transform: transform)
                     let v1 = worldVertex(at: Int(face[1]), geometry: geometry, transform: transform)
