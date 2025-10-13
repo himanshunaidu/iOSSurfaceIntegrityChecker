@@ -126,9 +126,9 @@ struct CIImageUtils {
     }
     
     /**
-     This function returns the transformation to revert the effect of `resizeWithAspectThenCrop`.
+     This function returns the transformation to revert the effect of `centerCrop`.
      */
-    static func transformRevertResizeWithAspectThenCrop(imageSize: CGSize, from originalSize: CGSize) -> CGAffineTransform {
+    static func revertCenterCropTransform(imageSize: CGSize, from originalSize: CGSize) -> CGAffineTransform {
         let sourceAspect = imageSize.width / imageSize.height
         let originalAspect = originalSize.width / originalSize.height
         
