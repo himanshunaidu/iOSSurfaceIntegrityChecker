@@ -55,8 +55,6 @@ struct DetectedObjectRasterizer {
                     width: CGFloat(boundingBox.size.width) * size.width,
                     height: CGFloat(boundingBox.size.height) * size.height
                 )
-                print("Box \(index): \(boundingBox.origin.x), \(boundingBox.origin.y), \(boundingBox.size.width), \(boundingBox.size.height)")
-                print("Box corrected bounds \(index): \(CGFloat(boundingBox.origin.x) * size.width), \(CGFloat(1 - boundingBox.origin.y) * size.height), \(boundingBoxRect.width), \(boundingBoxRect.height)")
                 let boundsColor = boundsConfig.color ?? UIColor.red
                 context.setStrokeColor(boundsColor.cgColor)
                 context.setLineWidth(boundsConfig.width)

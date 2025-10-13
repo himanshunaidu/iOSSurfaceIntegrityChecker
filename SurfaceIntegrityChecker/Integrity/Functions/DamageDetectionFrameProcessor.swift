@@ -35,6 +35,8 @@ struct DamageDetectionResult {
 
 /**
  A struct to handle damage detection in images using a CoreML model.
+ 
+ TODO: Instead of performing all the image pre-processing manually, use the built-in Vision options to handle this (e.g. orientation, imageCropAndScaleOption).
  */
 final class DamageDetectionFrameProcessor: ObservableObject {
     var visionModel: VNCoreMLModel
@@ -74,8 +76,8 @@ final class DamageDetectionFrameProcessor: ObservableObject {
             width: CGFloat(DamageDetectionConfig.inputWidth),
             height: CGFloat(DamageDetectionConfig.inputHeight)
         )
-        var cameraImage = CIImageUtils.resizeWithAspectThenCrop(cIImage, to: croppedSize)
-        cameraImage = cameraImage.oriented(orientation)
+        var cameraImage = cIImage.oriented(orientation)
+        cameraImage = CIImageUtils.resizeWithAspectThenCrop(cameraImage, to: croppedSize)
         let renderedCameraPixelBuffer = renderCIImageToPixelBuffer(
             cameraImage,
             size: croppedSize,
@@ -97,7 +99,7 @@ final class DamageDetectionFrameProcessor: ObservableObject {
         var damageDetectionResultCIImage: CIImage = CIImage(cgImage: damageDetectionResultImageUnwrapped)
         let inverse = orientation.inverted
         damageDetectionResultCIImage = damageDetectionResultCIImage.oriented(inverse)
-        var damageDetectionImage = CIImageUtils.undoResizeWithAspectThenCrop(
+        let damageDetectionImage = CIImageUtils.undoResizeWithAspectThenCrop(
             damageDetectionResultCIImage,
             originalSize: originalSize,
             croppedSize: croppedSize)
@@ -120,7 +122,7 @@ final class DamageDetectionFrameProcessor: ObservableObject {
             guard let detectionResult = segmentationRequest.results as? [VNRecognizedObjectObservation] else {
                 return nil
             }
-            var damageDetectionResults: [DamageDetectionResult] = detectionResult.map { observation in
+            let damageDetectionResults: [DamageDetectionResult] = detectionResult.map { observation in
                 let topLabel = observation.labels.first
                 return DamageDetectionResult(
                     boundingBox: observation.boundingBox,
@@ -140,6 +142,13 @@ final class DamageDetectionFrameProcessor: ObservableObject {
         }
         return nil
     }
+    
+    /**
+        Aligns a bounding box from normalized coordinates to image coordinates, taking into account the image orientation.
+     */
+//    func alignBoundingBox(_ boundingBox: CGRect, orientation: CGImagePropertyOrientation, imageSize: CGSize) -> CGRect {
+//        
+//    }
 }
 
 extension DamageDetectionFrameProcessor {

@@ -106,7 +106,7 @@ class ConnectedComponents {
     func getConnectedComponents(
         _ mesh: MeshResource,
         kKeep: Int = 2, // Keep face only if more than kKeep faces in component
-        kDilate: Int = 0, // Dilate component by this many hops
+        kDilate: Int = 0, // Dilate component if more than kDilate neighbors in component
         minFaces: Int = 6, // Minimum faces to keep component
         minArea: Float = 0.001 // Minimum total area (m^2) to keep component)
     ) -> [Component] {

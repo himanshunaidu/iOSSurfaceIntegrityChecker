@@ -28,7 +28,6 @@ struct ContentView: View {
     @State var arResources: MeshBundle?
     private func getARResources(meshBundle: MeshBundle?, shouldCallResourceUpdateCallback: Bool) {
         guard shouldCallResourceUpdateCallback, let meshBundle else { return }
-        print("Updating AR Resources received in ContentView since shouldCallResourceUpdateCallback and meshBundle is available")
         self.arResources = meshBundle
     }
     @State var shouldCallResourceUpdateCallback: Bool = true

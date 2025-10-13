@@ -38,7 +38,9 @@ struct ARViewControllerContainer: UIViewControllerRepresentable {
         uiViewController.showDebug = showDebug
         uiViewController.arResourceUpdateCallback = arResourceUpdateCallback
         uiViewController.shouldCallResourceUpdateCallback = shouldCallResourceUpdateCallback
-        uiViewController.applyOverlayLayoutIfNeeded()
+        // The following layouts should not be re-applied every update
+//        uiViewController.applyOverlayLayoutIfNeeded()
+//        uiViewController.applyDamageOverlayLayoutIfNeeded()
         uiViewController.applyDebugIfNeeded()
     }
     
@@ -67,6 +69,9 @@ struct MeshBundle {
     var depthBuffer: CVPixelBuffer?
     var confidenceBuffer: CVPixelBuffer?
     var location: CLLocation?
+    
+    var segmentationLabelImage: CIImage?
+    var damageDetectionResults: [DamageDetectionResult]?
 }
 
 final class ARHostViewController: UIViewController, ARSessionDelegate {
@@ -407,6 +412,9 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
             DispatchQueue.main.async { [weak self] in
                 self?.overlayImageView.image = ui
                 self?.damageOverlayImageView.image = damageUI
+                
+                self?.floorBundle?.segmentationLabelImage = self?.segmentationLabelImage
+                self?.floorBundle?.damageDetectionResults = damageDetectionResults?.results
             }
         }
     }
@@ -504,7 +512,7 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
                     let classification = ARMeshClassification(rawValue: classificationValue) ?? .none
                     
                     // We're interested in floor-like horizontal surfaces
-//                    guard classification == .floor else { continue }
+                    guard classification == .floor else { continue }
 //
                     let v0 = worldVertex(at: Int(face[0]), geometry: geometry, transform: transform)
                     let v1 = worldVertex(at: Int(face[1]), geometry: geometry, transform: transform)

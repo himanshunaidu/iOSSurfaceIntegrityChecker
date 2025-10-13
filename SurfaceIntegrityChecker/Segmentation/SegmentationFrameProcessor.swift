@@ -24,6 +24,11 @@ enum SegmentationProcessingError: Error, LocalizedError {
     }
 }
 
+/**
+    An object that processes camera frames for segmentation using a Core ML model.
+ 
+    TODO: Instead of performing all the image pre-processing manually, use the built-in Vision options to handle this (e.g. orientation, imageCropAndScaleOption).
+ */
 final class SegmentationFrameProcessor: ObservableObject {
 //    var pixelBuffer: CVPixelBuffer?
 //    var exifOrientation: CGImagePropertyOrientation = .right
@@ -73,8 +78,9 @@ final class SegmentationFrameProcessor: ObservableObject {
             width: SegmentationConfig.cocoCustom11Config.inputSize.width,
             height: SegmentationConfig.cocoCustom11Config.inputSize.height
         )
-        var cameraImage = CIImageUtils.resizeWithAspectThenCrop(cIImage, to: croppedSize)
-        cameraImage = cameraImage.oriented(orientation)
+        
+        var cameraImage = cIImage.oriented(orientation)
+        cameraImage = CIImageUtils.resizeWithAspectThenCrop(cameraImage, to: croppedSize)
         
         let renderedCameraPixelBuffer = renderCIImageToPixelBuffer(
             cameraImage,
@@ -102,7 +108,6 @@ final class SegmentationFrameProcessor: ObservableObject {
         
         let inverse = orientation.inverted
         mask = mask.oriented(inverse)
-//        print("Inverted Mask Size and Extent: \(mask.extent.size), \(mask.extent)")
         var resizedMask = CIImageUtils.undoResizeWithAspectThenCrop(
             mask, originalSize: originalSize, croppedSize: croppedSize)
         resizedMask = self.backCIImageToPixelBuffer(resizedMask)
