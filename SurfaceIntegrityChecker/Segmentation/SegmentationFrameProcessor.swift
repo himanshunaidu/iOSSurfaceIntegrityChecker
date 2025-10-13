@@ -80,7 +80,7 @@ final class SegmentationFrameProcessor: ObservableObject {
         )
         
         var cameraImage = cIImage.oriented(orientation)
-        cameraImage = CIImageUtils.resizeWithAspectThenCrop(cameraImage, to: croppedSize)
+        cameraImage = CIImageUtils.centerCrop(cameraImage, to: croppedSize)
         
         let renderedCameraPixelBuffer = renderCIImageToPixelBuffer(
             cameraImage,
@@ -108,14 +108,14 @@ final class SegmentationFrameProcessor: ObservableObject {
         
         let inverse = orientation.inverted
         mask = mask.oriented(inverse)
-        var resizedMask = CIImageUtils.undoResizeWithAspectThenCrop(
-            mask, originalSize: originalSize, croppedSize: croppedSize)
+        var resizedMask = CIImageUtils.revertCenterCrop(
+            mask, originalSize: originalSize)
         resizedMask = self.backCIImageToPixelBuffer(resizedMask)
         
         if var colorMask = colorMask {
             colorMask = colorMask.oriented(inverse)
-            let resizedColorMask = CIImageUtils.undoResizeWithAspectThenCrop(
-                colorMask, originalSize: originalSize, croppedSize: croppedSize)
+            let resizedColorMask = CIImageUtils.revertCenterCrop(
+                colorMask, originalSize: originalSize)
             return (label: resizedMask, color: resizedColorMask)
         }
         

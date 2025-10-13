@@ -62,11 +62,13 @@ struct CIImageUtils {
     }
     
     /**
+     Center-crop with aspect-fit resizing.
+     
      This function resizes a CIImage to match the specified size by:
         - First, resizing the image to match the smaller dimension while maintaining the aspect ratio.
         - Then, cropping the image to the specified size while centering it.
      */
-    static func resizeWithAspectThenCrop(_ image: CIImage, to size: CGSize) -> CIImage {
+    static func centerCrop(_ image: CIImage, to size: CGSize) -> CIImage {
         let sourceAspect = image.extent.width / image.extent.height
         let destAspect = size.width / size.height
         
@@ -84,61 +86,44 @@ struct CIImageUtils {
             transform = CGAffineTransform(scaleX: scale, y: scale)
                 .translatedBy(x: 0, y: yOffset / scale)
         }
-        let newImage = image.transformed(by: transform)
-        let croppedImage = newImage.cropped(to: CGRect(origin: .zero, size: size))
+        let transformedImage = image.transformed(by: transform)
+        let croppedImage = transformedImage.cropped(to: CGRect(origin: .zero, size: size))
         return croppedImage
     }
     
     /**
-     This reverse function attempts to revert the effect of `resizeWithAspectThenCrop`.
+     This reverse function attempts to revert the effect of `centerCrop`.
         It takes the cropped and resized image, the target size it was resized to, and the original size before resizing and cropping.
         It calculates the necessary scaling and translation to restore the image to its original aspect ratio and size.
      */
-    static func undoResizeWithAspectThenCrop(
-        _ mask: CIImage, originalSize: CGSize, croppedSize: CGSize
+    static func revertCenterCrop(
+        _ image: CIImage, originalSize: CGSize
     ) -> CIImage {
-            let sourceAspect = originalSize.width / originalSize.height
-            let destAspect   = croppedSize.width / croppedSize.height
-
-            if sourceAspect > destAspect {
-                // Source wider than dest (e.g. 1920×1440 -> 640×640):
-                // Step 1 used: scale = destH / srcH ; newWidth = srcW * scale ; then center-crop X.
-                let scale = croppedSize.height / originalSize.height
-                
-                // Scale up uniformly to original size of smaller dimension (1/scale)
-                let inv = 1.0 / scale
-                let resized = mask.transformed(by: CGAffineTransform(scaleX: inv, y: inv))
-                
-                let newWidth = originalSize.width
-                let xOffset = (resized.extent.width - newWidth) / 2
-                
-                // Put the 640×640 mask back into an (newWidth × croppedH) canvas, centered
-                let canvas = CGRect(x: 0, y: 0, width: newWidth, height: originalSize.height)
-                let translated = resized.transformed(by: CGAffineTransform(translationX: -xOffset, y: 0)) // -xOffset is positive
-                let background = CIImage(color: .clear).cropped(to: canvas)
-                let composed = translated.composited(over: background)
-
-                return composed
-            } else {
-                // Source taller than dest (crop Y)
-                let scale = croppedSize.width / originalSize.width
-                
-                let inv = 1.0 / scale
-                let resized = mask.transformed(by: CGAffineTransform(scaleX: inv, y: inv))
-                
-                let newHeight = originalSize.height
-                let yOffset = (resized.extent.height - newHeight) / 2
-                
-                let canvas = CGRect(x: 0, y: 0, width: originalSize.width, height: newHeight)
-                let translated = resized.transformed(by: CGAffineTransform(translationX: 0,
-                                                                            y: -yOffset)) // -yOffset is positive
-                let background = CIImage(color: .clear).cropped(to: canvas)
-                let composed = translated.composited(over: background)
-                
-                return composed
-            }
+        let sourceAspect = image.extent.width / image.extent.height
+        let destAspect = originalSize.width / originalSize.height
+        
+        var transform: CGAffineTransform = .identity
+        var newWidth: CGFloat = originalSize.width
+        var newHeight: CGFloat = originalSize.height
+        if sourceAspect < destAspect {
+            let scale = originalSize.height / image.extent.height
+            newWidth = originalSize.width
+            let xOffset = (newWidth - image.extent.width * scale) / 2
+            transform = CGAffineTransform(scaleX: scale, y: scale)
+                .translatedBy(x: xOffset / scale, y: 0)
+        } else {
+            let scale = originalSize.width / image.extent.width
+            newHeight = originalSize.height
+            let yOffset = (newHeight - image.extent.height * scale) / 2
+            transform = CGAffineTransform(scaleX: scale, y: scale)
+                .translatedBy(x: 0, y: yOffset / scale)
         }
-    
+        let transformedImage = image.transformed(by: transform)
+        let canvas = CGRect(x: 0, y: 0, width: newWidth, height: newHeight)
+        let background = CIImage(color: .clear).cropped(to: canvas)
+        let composed = transformedImage.composited(over: background)
+        return composed
+    }
     
     /**
      This function returns the transformation to revert the effect of `resizeWithAspectThenCrop`.
