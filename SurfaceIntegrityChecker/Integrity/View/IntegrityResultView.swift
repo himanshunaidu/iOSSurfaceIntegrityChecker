@@ -96,8 +96,10 @@ struct IntegrityResultView: View {
         else {
             return nil
         }
-        let meshAnchors = arResources.meshAnchors
+//        let meshAnchors = arResources.meshAnchors
         let size = cameraImage.extent.size
+        
+        let damageDetectionResults = arResources.damageDetectionResults
         
 //        let meshImage: CGImage? = MeshRasterizer.rasterizeMesh(meshTriangles: integrityResults.points, size: size)
 //        guard let cgImage = meshImage else {
@@ -123,6 +125,14 @@ struct IntegrityResultView: View {
                 triangleColors: integrityResults.triangleColors,
                 imageSize: size
             )
+            
+            if let damageDetectionResults = damageDetectionResults {
+                drawBoundingBoxes(
+                    cg,
+                    boxes: damageDetectionResults.map( { $0.boundingBox }),
+                    imageSize: size
+                )
+            }
         }
         
 //        return imageOriented(image, to: arResources.orientation)
@@ -153,6 +163,26 @@ struct IntegrityResultView: View {
             cg.addLine(to: triangle.2)
             cg.closePath()
             cg.strokePath()
+        }
+    }
+    
+    private func drawBoundingBoxes(
+        _ cg: CGContext,
+        boxes: [CGRect],
+        imageSize: CGSize
+    ) {
+        cg.setStrokeColor(UIColor.red.cgColor)
+        cg.setLineWidth(2.0)
+        
+        print("Drawing \(boxes.count) bounding boxes on image of size \(imageSize)")
+        for box in boxes {
+            if !validatePoint(box.origin, in: imageSize) ||
+                !validatePoint(CGPoint(x: box.maxX, y: box.maxY), in: imageSize) {
+                print("Skipping box with out-of-bounds points: \(box.origin), \(CGPoint(x: box.maxX, y: box.maxY))")
+                continue
+            }
+            
+            cg.stroke(box)
         }
     }
     
