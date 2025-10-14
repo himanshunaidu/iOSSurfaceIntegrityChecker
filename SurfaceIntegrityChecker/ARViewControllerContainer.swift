@@ -534,7 +534,7 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
                     let classification = ARMeshClassification(rawValue: classificationValue) ?? .none
                     
                     // We're interested in floor-like horizontal surfaces
-//                    guard classification == .floor else { continue }
+                    guard classification == .floor else { continue }
 //
                     let v0 = worldVertex(at: Int(face[0]), geometry: geometry, transform: transform)
                     let v1 = worldVertex(at: Int(face[1]), geometry: geometry, transform: transform)
@@ -572,13 +572,12 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
                     } else {
                     }
                     counts["kept", default: 0] += 1
-                    
-                    triangles.append((v0, v1, v2))
 //
                     let edge1 = v1 - v0
                     let edge2 = v2 - v0
                     let normal = normalize(cross(edge1, edge2))
                     
+                    triangles.append((v0, v1, v2))
                     triangleNormals.append(normal)
                 }
             }
@@ -602,7 +601,10 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
         
         for (i, triangle) in triangles.enumerated() {
             let angleRad = abs(acos(dot(triangleNormals[i], meanNormal)))
-            let angleDeg = angleRad * (180.0 / .pi)
+            var angleDeg = angleRad * (180.0 / .pi)
+            if angleDeg > 90.0 {
+                angleDeg = 180.0 - angleDeg
+            }
             if angleDeg > thresholdDegrees {
                 deviantTriangles.append(triangle)
             } else {

@@ -120,6 +120,7 @@ struct IntegrityResultView: View {
             drawWireFrame(
                 cg,
                 triangles: integrityResults.points,
+                triangleColors: integrityResults.triangleColors,
                 imageSize: size
             )
         }
@@ -132,6 +133,7 @@ struct IntegrityResultView: View {
     private func drawWireFrame(
         _ cg: CGContext,
         triangles: [(CGPoint, CGPoint, CGPoint)],
+        triangleColors: [UIColor],
         imageSize: CGSize
     ) {
 //        print("Drawing \(triangles.count) triangles on image of size \(imageSize)")
@@ -142,6 +144,9 @@ struct IntegrityResultView: View {
 //                print("Skipping triangle \(index) with out-of-bounds points: \(triangle.0), \(triangle.1), \(triangle.2)")
                 continue
             }
+            
+            cg.setStrokeColor(triangleColors[index % triangleColors.count].cgColor)
+            
             cg.beginPath()
             cg.move(to: triangle.0)
             cg.addLine(to: triangle.1)

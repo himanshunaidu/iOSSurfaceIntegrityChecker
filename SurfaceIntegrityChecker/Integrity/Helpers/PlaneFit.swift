@@ -19,7 +19,7 @@ class PlaneFit {
      This algorithm is used for fitting a plane for a polygon mesh.
      It uses the centroids of the polygons, weighted by their areas.
      */
-    static func fitPlanePCA(_ points: [simd_float3], weights: [Float]) -> Plane? {
+    func fitPlanePCA(_ points: [simd_float3], weights: [Float]) -> Plane? {
         guard points.count>=3, points.count==weights.count else {
             return nil
         }

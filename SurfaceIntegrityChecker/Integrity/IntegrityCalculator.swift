@@ -29,24 +29,15 @@ struct IntegrityResults {
     var triangleNormals: [SIMD3<Float>] = []
     var points: [(CGPoint, CGPoint, CGPoint)] = []
     var integrityStatus: IntegrityStatus = .intact
+    
+    var triangleColors: [UIColor] = []
 }
 
 class IntegrityCalculator {
     private var connectedComponentsCalculator: ConnectedComponents = ConnectedComponents()
+    private var planeFit: PlaneFit = PlaneFit()
     
-    func calculateIntegrity(of meshBundle: MeshBundle) -> Bool {
-        let deviantMesh = meshBundle.redEntity.model?.mesh
-        guard let deviantMesh else {
-            print("No mesh found for the red entity.")
-            return false
-        }
-        
-        let connectedComponents = connectedComponentsCalculator.getConnectedComponents(deviantMesh)
-//        print("Areas of connected components: \(connectedComponents.map { $0.totalArea })")
-        let totalArea = connectedComponents.reduce(0, { $0 + $1.totalArea})
-        
-        return totalArea > 0.1
-    }
+    private var meshPlaneAngularDeviationThreshold: Float = 5.0 // degrees
     
     func getIntegrityResults(_ arResources: MeshBundle) -> IntegrityResults? {
         guard let segmentationLabelImage = arResources.segmentationLabelImage,
@@ -98,7 +89,7 @@ class IntegrityCalculator {
                     let classification = ARMeshClassification(rawValue: classificationValue) ?? .none
                     
                     // We're interested in floor-like horizontal surfaces
-                    //                    guard classification == .floor else { continue }
+                    guard classification == .floor else { continue }
                     //
                     let v0 = worldVertex(at: Int(face[0]), geometry: geometry, transform: transform)
                     let v1 = worldVertex(at: Int(face[1]), geometry: geometry, transform: transform)
@@ -128,17 +119,13 @@ class IntegrityCalculator {
                         //                        print("Skipping triangle at \(px) with label \(value)")
                         counts["classMismatch", default: 0] += 1
                         continue
-                    } else {
                     }
                     counts["kept", default: 0] += 1
                     
-                    triangles.append((v0, v1, v2))
                     //
                     let edge1 = v1 - v0
                     let edge2 = v2 - v0
                     let normal = normalize(cross(edge1, edge2))
-                    
-                    triangleNormals.append(normal)
                     
                     let point = [v0, v1, v2].map {
                         projectWorldToPixel(
@@ -147,23 +134,90 @@ class IntegrityCalculator {
                             intrinsics: cameraIntrinsics,
                             imageSize: segmentationLabelImage.extent.size) ?? CGPoint(x: -1, y: -1)
                     }
+                    if (!validatePoint(point[0], in: segmentationLabelImage.extent.size) ||
+                        !validatePoint(point[1], in: segmentationLabelImage.extent.size) ||
+                        !validatePoint(point[2], in: segmentationLabelImage.extent.size)) {
+                        continue
+                    }
+                    triangleNormals.append(normal)
+                    triangles.append((v0, v1, v2))
                     points.append( (point[0], point[1], point[2]) )
                 }
             }
         }
         
-        guard !triangleNormals.isEmpty else { return nil }
+//        guard !triangleNormals.isEmpty else { return nil }
+        var triangleColors: [UIColor] = triangles.map { _ in UIColor(red: 0.957, green: 0.137, blue: 0.910, alpha: 0.9) }
+        getMeshIntegrity(triangles, triangleColors: &triangleColors)
         
         return IntegrityResults(
             triangles: triangles,
             triangleNormals: triangleNormals,
             points: points,
-            integrityStatus: .intact
+            integrityStatus: .intact,
+            triangleColors: triangleColors
         )
     }
     
+    func getMeshIntegrity(_ triangles: [(SIMD3<Float>, SIMD3<Float>, SIMD3<Float>)], triangleColors: inout [UIColor]) -> Void {
+        var trianglePoints: [SIMD3<Float>] = []
+        var triangleWeights: [Float] = []
+        
+        for (_, triangle) in triangles.enumerated() {
+            let (v0, v1, v2) = triangle
+            let centroid = (v0 + v1 + v2) / 3.0
+            trianglePoints.append(centroid)
+            
+            let area = length(cross(v1 - v0, v2 - v0)) / 2.0
+            triangleWeights.append(area)
+        }
+        
+        let plane: Plane? = planeFit.fitPlanePCA(trianglePoints, weights: triangleWeights)
+        guard let plane else {
+            print("Failed to fit a plane to the triangle centroids.")
+            return
+        }
+        print("Fitted plane: normal = \(plane.n), d = \(plane.d)")
+        
+        var angularDeviations: [Float] = []
+        for (index, triangle) in triangles.enumerated() {
+            let (v0, v1, v2) = triangle
+            let edge1 = v1 - v0
+            let edge2 = v2 - v0
+            let normal = normalize(cross(edge1, edge2))
+            
+            let dotProduct = dot(normal, plane.n)
+            let clampedDot = max(-1.0, min(1.0, dotProduct))
+            let angleRad = acos(clampedDot)
+            var angleDeg = angleRad * (180.0 / .pi)
+            if angleDeg > 90 {
+                angleDeg = 180 - angleDeg
+            }
+            angularDeviations.append(angleDeg)
+            
+            if angleDeg > meshPlaneAngularDeviationThreshold {
+//                print("Deviation of triangle \(index) is \(angleDeg)°")
+                triangleColors[index] = UIColor(red: 1.0, green: 0, blue: 0, alpha: 0.9)
+            }
+        }
+    }
+    
+    func calculateIntegrity(of meshBundle: MeshBundle) -> Bool {
+        let deviantMesh = meshBundle.redEntity.model?.mesh
+        guard let deviantMesh else {
+            print("No mesh found for the red entity.")
+            return false
+        }
+        
+        let connectedComponents = connectedComponentsCalculator.getConnectedComponents(deviantMesh)
+//        print("Areas of connected components: \(connectedComponents.map { $0.totalArea })")
+        let totalArea = connectedComponents.reduce(0, { $0 + $1.totalArea})
+        
+        return totalArea > 0.1
+    }
+    
     // Helper: Get world-space position of a vertex
-    func worldVertex(at index: Int, geometry: ARMeshGeometry, transform: simd_float4x4) -> SIMD3<Float> {
+    private func worldVertex(at index: Int, geometry: ARMeshGeometry, transform: simd_float4x4) -> SIMD3<Float> {
         let vertices = geometry.vertices
         let vertexPointer = vertices.buffer.contents().advanced(by: vertices.offset + (vertices.stride * Int(index)))
         let vertex = vertexPointer.assumingMemoryBound(to: SIMD3<Float>.self).pointee
@@ -173,7 +227,7 @@ class IntegrityCalculator {
         return SIMD3(worldVertex4D.x, worldVertex4D.y, worldVertex4D.z)
     }
     
-    func projectWorldToPixel(_ world: simd_float3,
+    private func projectWorldToPixel(_ world: simd_float3,
                              cameraTransform: simd_float4x4, // ARCamera.transform (camera->world)
                              intrinsics K: simd_float3x3,
                              imageSize: CGSize) -> CGPoint? {
@@ -209,7 +263,7 @@ class IntegrityCalculator {
         return nil
     }
     
-    func sampleMask(_ pixelBuffer: CVPixelBuffer, at px: CGPoint,
+    private func sampleMask(_ pixelBuffer: CVPixelBuffer, at px: CGPoint,
                     width: Int, height: Int, bytesPerRow: Int
     ) -> UInt8? {
         let w = width
@@ -227,5 +281,9 @@ class IntegrityCalculator {
         let ptr = base.assumingMemoryBound(to: UInt8.self)
         let value = ptr[iy * bpr + ix]
         return value
+    }
+    
+    private func validatePoint(_ point: CGPoint, in size: CGSize) -> Bool {
+        return point.x >= 0 && point.x <= size.width && point.y >= 0 && point.y <= size.height
     }
 }

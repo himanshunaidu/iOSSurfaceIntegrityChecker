@@ -93,10 +93,10 @@ class IntegrityResultImageViewController: UIViewController {
         if var newCameraImage = newResources?.cameraImage {
             newCameraImage = newCameraImage.oriented(newResources?.orientation ?? .right)
             self.cameraUIImage = UIImage(ciImage: newCameraImage)
-//            self.imageView.image = self.cameraUIImage
+            self.imageView.image = self.cameraUIImage
         }
         if var newMeshOverlayImage = meshOverlayImage {
-//            newMeshOverlayImage = orientImage(newMeshOverlayImage, to: newResources?.orientation ?? .right) ?? newMeshOverlayImage
+            newMeshOverlayImage = orientImage(newMeshOverlayImage, to: newResources?.orientation ?? .right) ?? newMeshOverlayImage
             self.meshOverlayImage = newMeshOverlayImage
             self.meshOverlayView.image = self.meshOverlayImage
         }
