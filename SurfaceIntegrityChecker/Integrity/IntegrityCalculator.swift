@@ -76,7 +76,6 @@ class IntegrityCalculator {
         var uniqueValueFrequencies: [UInt8: Int] = [:]
         var counts = ["total": 0, "projectFailed": 0, "sampleFailed": 0, "classMismatch": 0, "kept": 0]
         
-        print("Processing \(meshAnchors.count) mesh anchors for integrity results...")
         for meshAnchor in meshAnchors {
             // Next step: Analyze this mesh anchor for height anomalies
             let geometry = meshAnchor.geometry

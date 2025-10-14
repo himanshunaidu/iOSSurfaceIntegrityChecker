@@ -10,8 +10,26 @@ import SwiftUI
 
 
 class IntegrityResultImageViewController: UIViewController {
-    var imageView: UIImageView! = nil
-    var meshOverlayView: UIImageView! = nil
+    var imageView: UIImageView! = {
+        let iv = UIImageView()
+        iv.contentMode = .scaleAspectFit
+        iv.clipsToBounds = true
+        iv.layer.cornerRadius = 12
+        iv.backgroundColor = UIColor(white: 0, alpha: 0.35)
+        iv.isUserInteractionEnabled = false
+        iv.translatesAutoresizingMaskIntoConstraints = false
+        return iv
+    }()
+    var meshOverlayView: UIImageView! = {
+        let iv = UIImageView()
+        iv.contentMode = .scaleAspectFit
+        iv.clipsToBounds = true
+        iv.layer.cornerRadius = 12
+        iv.backgroundColor = UIColor(white: 0, alpha: 0.35)
+        iv.isUserInteractionEnabled = false
+        iv.translatesAutoresizingMaskIntoConstraints = false
+        return iv
+    }()
     
     var arResources: MeshBundle?
     var meshOverlayImage: UIImage? = nil
@@ -21,8 +39,8 @@ class IntegrityResultImageViewController: UIViewController {
     var classes: [String] = []
     
     init(arResources: MeshBundle?, meshOverlayImage: UIImage? = nil) {
-        self.imageView = UIImageView()
-        self.meshOverlayView = UIImageView()
+//        self.imageView = UIImageView()
+//        self.meshOverlayView = UIImageView()
         self.arResources = arResources
         self.meshOverlayImage = meshOverlayImage
         super.init(nibName: nil, bundle: nil)
@@ -36,12 +54,13 @@ class IntegrityResultImageViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        imageView.contentMode = .scaleAspectFit
-        imageView.translatesAutoresizingMaskIntoConstraints = false
-        imageView.image = cameraUIImage
+//        imageView.contentMode = .scaleAspectFit
+//        imageView.translatesAutoresizingMaskIntoConstraints = false
+//        imageView.image = cameraUIImage
 
         view.addSubview(imageView)
 
+        NSLayoutConstraint.deactivate(imageView.constraints)
         NSLayoutConstraint.activate([
             imageView.topAnchor.constraint(equalTo: view.topAnchor),
             imageView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
@@ -50,12 +69,13 @@ class IntegrityResultImageViewController: UIViewController {
 //            segmentationView.widthAnchor.constraint(equalTo: segmentationView.heightAnchor, multiplier: aspectRatio)
         ])
         
-        meshOverlayView.contentMode = .scaleAspectFit
-        meshOverlayView.translatesAutoresizingMaskIntoConstraints = false
+//        meshOverlayView.contentMode = .scaleAspectFit
+//        meshOverlayView.translatesAutoresizingMaskIntoConstraints = false
         meshOverlayView.image = meshOverlayImage
         
         view.addSubview(meshOverlayView)
         
+        NSLayoutConstraint.deactivate(meshOverlayView.constraints)
         NSLayoutConstraint.activate([
             meshOverlayView.topAnchor.constraint(equalTo: view.topAnchor),
             meshOverlayView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
@@ -71,14 +91,28 @@ class IntegrityResultImageViewController: UIViewController {
     
     func updateResources(_ newResources: MeshBundle?, meshOverlayImage: UIImage? = nil) {
         if var newCameraImage = newResources?.cameraImage {
-//            newCameraImage = newCameraImage.oriented(newResources?.orientation ?? .right)
+            newCameraImage = newCameraImage.oriented(newResources?.orientation ?? .right)
             self.cameraUIImage = UIImage(ciImage: newCameraImage)
-            self.imageView.image = self.cameraUIImage
+//            self.imageView.image = self.cameraUIImage
         }
-        if let newMeshOverlayImage = meshOverlayImage {
+        if var newMeshOverlayImage = meshOverlayImage {
+//            newMeshOverlayImage = orientImage(newMeshOverlayImage, to: newResources?.orientation ?? .right) ?? newMeshOverlayImage
             self.meshOverlayImage = newMeshOverlayImage
             self.meshOverlayView.image = self.meshOverlayImage
         }
+    }
+    
+    private func orientImage(_ image: UIImage, to orientation: CGImagePropertyOrientation) -> UIImage? {
+        guard let cgimg = image.cgImage else { return image }
+        
+        let size = CGSize(width: cgimg.width, height: cgimg.height)
+        let t = orientation.toUpTransform(for: size)
+        
+        var ciImage = CIImage(cgImage: cgimg)
+        ciImage = ciImage.transformed(by: t)
+        
+        let orientedImg = UIImage(ciImage: ciImage)
+        return orientedImg
     }
 }
 
@@ -92,6 +126,6 @@ struct HostedIntegrityResultImageViewController: UIViewControllerRepresentable{
     }
     
     func updateUIViewController(_ uiViewController: IntegrityResultImageViewController, context: Context) {
-        uiViewController.updateResources(arResources)
+        uiViewController.updateResources(arResources, meshOverlayImage: meshOverlayImage)
     }
 }

@@ -79,8 +79,8 @@ struct IntegrityResultView: View {
                 self.meshOverlayImage = createMeshOverlayImage(
                     arResources: arResources,
                     integrityResults: integrityResults,
-                    stroke: 1.0,
-                    color: .white
+                    stroke: 3.0,
+                    color: .red
                 )
             }
         }
@@ -98,6 +98,11 @@ struct IntegrityResultView: View {
         }
         let meshAnchors = arResources.meshAnchors
         let size = cameraImage.extent.size
+        
+//        let meshImage: CGImage? = MeshRasterizer.rasterizeMesh(meshTriangles: integrityResults.points, size: size)
+//        guard let cgImage = meshImage else {
+//            return nil
+//        }
         
         let format = UIGraphicsImageRendererFormat()
         format.opaque = false
@@ -120,6 +125,7 @@ struct IntegrityResultView: View {
         }
         
 //        return imageOriented(image, to: arResources.orientation)
+//        let image = UIImage(cgImage: cgImage)
         return image
     }
     
@@ -128,30 +134,25 @@ struct IntegrityResultView: View {
         triangles: [(CGPoint, CGPoint, CGPoint)],
         imageSize: CGSize
     ) {
-        print("Drawing \(triangles.count) triangles on image of size \(imageSize)")
+//        print("Drawing \(triangles.count) triangles on image of size \(imageSize)")
         for (index, triangle) in triangles.enumerated() {
-            if index == 0 {
-                print("Drawing triangle 0: \(triangle)") // Debug print for the first triangle
+            if !validatePoint(triangle.0, in: imageSize) ||
+                !validatePoint(triangle.1, in: imageSize) ||
+                !validatePoint(triangle.2, in: imageSize) {
+//                print("Skipping triangle \(index) with out-of-bounds points: \(triangle.0), \(triangle.1), \(triangle.2)")
+                continue
             }
-            let a2 = CGPoint(
-                x: CGFloat(triangle.0.x) * imageSize.width,
-                y: CGFloat(triangle.0.y) * imageSize.height
-            )
-            let b2 = CGPoint(
-                x: CGFloat(triangle.1.x) * imageSize.width,
-                y: CGFloat(triangle.1.y) * imageSize.height
-            )
-            let c2 = CGPoint(
-                x: CGFloat(triangle.2.x) * imageSize.width,
-                y: CGFloat(triangle.2.y) * imageSize.height
-            )
             cg.beginPath()
-            cg.move(to: a2)
-            cg.addLine(to: b2)
-            cg.addLine(to: c2)
+            cg.move(to: triangle.0)
+            cg.addLine(to: triangle.1)
+            cg.addLine(to: triangle.2)
             cg.closePath()
             cg.strokePath()
         }
+    }
+    
+    private func validatePoint(_ point: CGPoint, in size: CGSize) -> Bool {
+        return point.x >= 0 && point.x <= size.width && point.y >= 0 && point.y <= size.height
     }
     
     private func imageOriented(_ image: UIImage, to orientation: CGImagePropertyOrientation) -> UIImage? {

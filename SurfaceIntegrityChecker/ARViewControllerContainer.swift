@@ -495,7 +495,6 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
             let assignedColor = generateRandomColor()
             
             floorBundle = MeshBundle(
-                meshAnchors: meshAnchors,
                 anchorEntity: anchorEntity, greenEntity: greenEntity, redEntity: redEntity,
                 lastUpdated: 0, assignedColor: assignedColor)
         }
@@ -632,6 +631,8 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
         if let fullEntity = createHorizontalMeshEntity(triangles: triangles, color: floorBundle?.assignedColor ?? .green, opacity: 0.25, name: "FullMesh") {
             floorBundle?.fullEntity = fullEntity
         }
+        
+        floorBundle?.meshAnchors = meshAnchors
         
 //                if let entity = createHorizontalMeshEntity(triangles: triangles) {
 //                    let anchorEntity = AnchorEntity(world: .zero) // Or use meshAnchor.transform for relative
