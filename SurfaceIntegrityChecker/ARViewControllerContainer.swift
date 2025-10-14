@@ -397,8 +397,8 @@ final class ARHostViewController: UIViewController, ARSessionDelegate {
 //            edges.intensity = 1.5
 //            let output = edges.outputImage ?? cropped
 
-//            segmentationColor = segmentationColor.oriented(exifOrientation)
-            segmentationColor = segmentationColor.transformed(by: CGImagePropertyOrientation.right.toUpTransform(for: segmentationColor.extent.size))
+            segmentationColor = segmentationColor.oriented(exifOrientation)
+//            segmentationColor = segmentationColor.transformed(by: CGImagePropertyOrientation.right.toUpTransform(for: segmentationColor.extent.size))
             guard let cg = ciContext.createCGImage(segmentationColor, from: segmentationColor.extent) else { return }
             let ui = UIImage(cgImage: cg)
             

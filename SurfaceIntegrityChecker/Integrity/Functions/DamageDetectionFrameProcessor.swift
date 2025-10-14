@@ -92,6 +92,12 @@ final class DamageDetectionFrameProcessor: ObservableObject {
         guard let damageDetectionResults: [DamageDetectionResult] = processImage(with: cIImage, orientation: .up) else {
             return nil
         }
+        let alignedDamageDetectionResults = damageDetectionResults.map { result in
+            var alignedResult = result
+            alignedResult.boundingBox = alignBoundingBox(result.boundingBox, orientation: orientation, imageSize: croppedSize, originalSize: originalSize)
+            return alignedResult
+        }
+        
         let damageDetectionResultImage = DetectedObjectRasterizer.rasterizeContourObjects(objects: damageDetectionResults, size: croppedSize)
         guard let damageDetectionResultImageUnwrapped = damageDetectionResultImage else {
             return (results: damageDetectionResults, resultImage: nil)
@@ -104,7 +110,7 @@ final class DamageDetectionFrameProcessor: ObservableObject {
             originalSize: originalSize)
 //        damageDetectionImage = backCIImageToPixelBuffer(damageDetectionImage)
         
-        return (results: damageDetectionResults, resultImage: damageDetectionImage)
+        return (results: alignedDamageDetectionResults, resultImage: damageDetectionImage)
     }
     
     func processImage(with cIImage: CIImage, orientation: CGImagePropertyOrientation) -> [DamageDetectionResult]? {
@@ -135,6 +141,7 @@ final class DamageDetectionFrameProcessor: ObservableObject {
 //                label: "Container"
 //            )
 //            damageDetectionResults.insert(containerResult, at: 0)
+            
             return damageDetectionResults
         } catch {
             print("Error processing detection request: \(error)")
@@ -145,9 +152,81 @@ final class DamageDetectionFrameProcessor: ObservableObject {
     /**
         Aligns a bounding box from normalized coordinates to image coordinates, taking into account the image orientation.
      */
-//    func alignBoundingBox(_ boundingBox: CGRect, orientation: CGImagePropertyOrientation, imageSize: CGSize) -> CGRect {
+    func alignBoundingBox(_ boundingBox: CGRect, orientation: CGImagePropertyOrientation, imageSize: CGSize, originalSize: CGSize) -> CGRect {
+        var orientationTransform = orientation.normalizedToUpTransform.inverted()
+        
+        // Adjust for Vision's coordinate system (origin at bottom-left)
+        // Not needed as it is taken care of later during rendering
+//        orientationTransform = orientationTransform.concatenating(CGAffineTransform(scaleX: 1, y: -1))
+//        orientationTransform = orientationTransform.concatenating(CGAffineTransform(translationX: 0, y: imageSize.height))
+//        print("Adjusted Orientation Transform: \(orientationTransform)")
+        
+        let alignedBox = boundingBox.applying(orientationTransform)
+        
+        // Revert the center-cropping effect to map back to original image size
+        
+        let translatedBox = translateBoundingBoxToRevertCenterCrop(alignedBox, imageSize: imageSize, originalSize: originalSize)
+        
+        let finalBox = CGRect(
+            x: translatedBox.origin.x * originalSize.width,
+            y: (1 - (translatedBox.origin.y + translatedBox.size.height)) * originalSize.height,
+            width: translatedBox.size.width * originalSize.width,
+            height: translatedBox.size.height * originalSize.height
+        )
+        
+        return finalBox
+    }
+    
+//    private func transformBoundingBox(_ boundingBox: CGRect, with transform: CGAffineTransform) -> CGRect {
+//        // We cannot simply use the .applying method as it transforms the space
+//        // Instead, we get the four corners and transform them individually
+//        let topLeft = CGPoint(x: boundingBox.minX, y: boundingBox.minY).applying(transform)
+//        let topRight = CGPoint(x: boundingBox.maxX, y: boundingBox.minY).applying(transform)
+//        let bottomLeft = CGPoint(x: boundingBox.minX, y: boundingBox.maxY).applying(transform)
+//        let bottomRight = CGPoint(x: boundingBox.maxX, y: boundingBox.maxY).applying(transform)
 //        
+//        let newRect = CGRect(
+//            x: min(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x),
+//            y: min(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y),
+//            width: max(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x) - min(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x),
+//            height: max(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y) - min(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y)
+//        )
+//        return newRect
 //    }
+    
+    /**
+     Translated a bounding box to revert the effect of center cropping.
+     
+     Since the co-ordinates are normalized, we only need to adjust translations and not scaling.
+     */
+    private func translateBoundingBoxToRevertCenterCrop(_ boundingBox: CGRect, imageSize: CGSize, originalSize: CGSize) -> CGRect {
+        let sourceAspect = imageSize.width / imageSize.height
+        let originalAspect = originalSize.width / originalSize.height
+        
+        var transform: CGAffineTransform = .identity
+        if sourceAspect < originalAspect {
+            // Image was cropped horizontally because original is wider
+            let scale = imageSize.height / originalSize.height
+            let newImageSize = CGSize(width: imageSize.width / scale, height: imageSize.height / scale)
+            
+            let xOffset = (originalSize.width - newImageSize.width) / (2 * originalSize.width)
+            let widthScale = newImageSize.width / originalSize.width
+            transform = CGAffineTransform(scaleX: widthScale, y: 1)
+                .translatedBy(x: xOffset / widthScale, y: 0)
+        } else {
+            // Image was cropped vertically because original is taller
+            let scale = imageSize.width / originalSize.width
+            let newImageSize = CGSize(width: imageSize.width / scale, height: imageSize.height / scale)
+            
+            let yOffset = (originalSize.height - newImageSize.height) / (2 * originalSize.height)
+            let heightScale = newImageSize.height / originalSize.height
+            transform = CGAffineTransform(scaleX: 1, y: heightScale)
+                .translatedBy(x: 0, y: yOffset / heightScale)
+        }
+        print("Translation Transform: \(transform)")
+        let translatedBox = boundingBox.applying(transform)
+        return translatedBox
+    }
 }
 
 extension DamageDetectionFrameProcessor {
