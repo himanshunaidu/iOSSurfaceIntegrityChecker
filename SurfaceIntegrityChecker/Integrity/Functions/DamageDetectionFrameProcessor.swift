@@ -92,11 +92,17 @@ final class DamageDetectionFrameProcessor: ObservableObject {
         guard let damageDetectionResults: [DamageDetectionResult] = processImage(with: cIImage, orientation: .up) else {
             return nil
         }
-        let alignedDamageDetectionResults = damageDetectionResults.map { result in
+        var alignedDamageDetectionResults = damageDetectionResults.map { result in
             var alignedResult = result
             alignedResult.boundingBox = alignBoundingBox(result.boundingBox, orientation: orientation, imageSize: croppedSize, originalSize: originalSize)
             return alignedResult
         }
+        alignedDamageDetectionResults.append(DamageDetectionResult(
+            boundingBox: CGRect(x: 0, y: originalSize.height/2, width: originalSize.width/2, height: originalSize.height/2),
+            confidence: 1.0,
+            label: "Container"
+        ))
+            
         
         let damageDetectionResultImage = DetectedObjectRasterizer.rasterizeContourObjects(objects: damageDetectionResults, size: croppedSize)
         guard let damageDetectionResultImageUnwrapped = damageDetectionResultImage else {
@@ -223,7 +229,6 @@ final class DamageDetectionFrameProcessor: ObservableObject {
             transform = CGAffineTransform(scaleX: 1, y: heightScale)
                 .translatedBy(x: 0, y: yOffset / heightScale)
         }
-        print("Translation Transform: \(transform)")
         let translatedBox = boundingBox.applying(transform)
         return translatedBox
     }

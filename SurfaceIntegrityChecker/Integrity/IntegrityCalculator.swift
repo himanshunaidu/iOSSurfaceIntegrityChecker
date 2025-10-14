@@ -149,6 +149,9 @@ class IntegrityCalculator {
 //        guard !triangleNormals.isEmpty else { return nil }
         var triangleColors: [UIColor] = triangles.map { _ in UIColor(red: 0.957, green: 0.137, blue: 0.910, alpha: 0.9) }
         getMeshIntegrity(triangles, triangleColors: &triangleColors)
+        if let damageDetectionResults = arResources.damageDetectionResults {
+            getBoundingBoxIntegrity(points, triangleColors: &triangleColors, damageDetectionResults: damageDetectionResults)
+        }
         
         return IntegrityResults(
             triangles: triangles,
@@ -198,6 +201,23 @@ class IntegrityCalculator {
             if angleDeg > meshPlaneAngularDeviationThreshold {
 //                print("Deviation of triangle \(index) is \(angleDeg)°")
                 triangleColors[index] = UIColor(red: 1.0, green: 0, blue: 0, alpha: 0.9)
+            }
+        }
+    }
+    
+    func getBoundingBoxIntegrity(
+        _ trianglePoints: [(CGPoint, CGPoint, CGPoint)], triangleColors: inout [UIColor],
+        damageDetectionResults: [DamageDetectionResult]
+    ) {
+        let boundingBoxes = damageDetectionResults.map { $0.boundingBox }
+        
+        for (index, triangle) in trianglePoints.enumerated() {
+            let triangleVertices = [triangle.0, triangle.1, triangle.2].map { SIMD2<Float>(Float($0.x), Float($0.y)) }
+            let centroid = (triangleVertices[0] + triangleVertices[1] + triangleVertices[2]) / 3.0
+            let centroidPoint = CGPoint(x: CGFloat(centroid.x), y: CGFloat(centroid.y))
+            
+            if boundingBoxes.contains(where: { $0.contains(centroidPoint) }) {
+                triangleColors[index] = UIColor(red: 0.0, green: 0, blue: 1.0, alpha: 0.9)
             }
         }
     }

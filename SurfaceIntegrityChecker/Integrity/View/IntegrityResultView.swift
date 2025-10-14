@@ -174,11 +174,9 @@ struct IntegrityResultView: View {
         cg.setStrokeColor(UIColor.red.cgColor)
         cg.setLineWidth(2.0)
         
-        print("Drawing \(boxes.count) bounding boxes on image of size \(imageSize)")
         for box in boxes {
             if !validatePoint(box.origin, in: imageSize) ||
                 !validatePoint(CGPoint(x: box.maxX, y: box.maxY), in: imageSize) {
-                print("Skipping box with out-of-bounds points: \(box.origin), \(CGPoint(x: box.maxX, y: box.maxY))")
                 continue
             }
             
