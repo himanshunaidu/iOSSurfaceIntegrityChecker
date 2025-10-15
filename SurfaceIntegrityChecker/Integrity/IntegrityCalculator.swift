@@ -150,8 +150,15 @@ class IntegrityCalculator {
         var triangleColors: [UIColor] = triangles.map { _ in UIColor(red: 0.957, green: 0.137, blue: 0.910, alpha: 0.9) }
         getMeshIntegrity(triangles, triangleColors: &triangleColors)
         if let damageDetectionResults = arResources.damageDetectionResults {
-            getBoundingBoxIntegrity(
+            let (boundingBoxTriangleIndices, boundingBoxMeshAreas) = getBoundingBoxIntegrity(
                 points, triangles: triangles, damageDetectionResults: damageDetectionResults, triangleColors: &triangleColors
+            )
+            getBoundingBoxMeshIntegrity(
+                triangles,
+                boundingBoxTriangleIndices: boundingBoxTriangleIndices,
+                boundingBoxMeshAreas: boundingBoxMeshAreas,
+                damageDetectionResults: damageDetectionResults,
+                triangleColors: &triangleColors
             )
         }
         
@@ -242,7 +249,7 @@ class IntegrityCalculator {
                 if boundingBox.contains(centroidPoint) {
                     boundingBoxTriangleIndices[bI, default: []].append(index)
                     boundingBoxMeshAreas[bI, default: 0] += triangleAreas[index]
-                    triangleColors[index] = UIColor(red: 0.0, green: 0, blue: 1.0, alpha: 0.9)
+                    triangleColors[index] = UIColor(red: 0.0, green: 1.0, blue: 0.0, alpha: 0.9)
                 }
             }
         }
@@ -273,7 +280,16 @@ class IntegrityCalculator {
             let triangleNormalVariance = triangleNormals.map {
                 length($0 - triangleNormalMean) * length($0 - triangleNormalMean)
             }.reduce(0, +) / Float(triangleNormals.count)
-            print("Bounding box \(bI): Mesh area = \(meshArea), Triangle count = \(triangleIndices.count), Normal variance = \(triangleNormalVariance)")
+            
+            let triangleNormalStdDev = sqrt(triangleNormalVariance)
+            
+            for (tI, triangleNormal) in triangleNormals.enumerated() {
+                let deviation = length(triangleNormal - triangleNormalMean)
+                if deviation > 2 * triangleNormalStdDev {
+                    let index = triangleIndices[tI]
+                    triangleColors[index] = UIColor(red: 0.0, green: 0.0, blue: 1.0, alpha: 0.9)
+                }
+            }
         }
     }
     

@@ -15,7 +15,11 @@ struct IntegrityResultView: View {
     @State var integrityCalculator: IntegrityCalculator = IntegrityCalculator()
     @State var integrityResults: IntegrityResults = IntegrityResults()
     @State var arResources: MeshBundle?
-    @State var meshOverlayImage: UIImage? = nil
+    
+    @State var cameraUIImage: UIImage? = nil
+    @State var meshOverlayUIImage: UIImage? = nil
+    
+    let sharedCIContext = CIContext(options: nil)
     
     var body: some View {
         VStack {
@@ -24,7 +28,10 @@ struct IntegrityResultView: View {
                 .padding()
             
             if (arResources != nil) {
-                HostedIntegrityResultImageViewController(arResources: $arResources, meshOverlayImage: $meshOverlayImage)
+                HostedIntegrityResultImageViewController(cameraUIImage: $cameraUIImage, meshOverlayUIImage: $meshOverlayUIImage)
+                    .aspectRatio(1, contentMode: .fit)
+                    .frame(maxWidth: .infinity)
+                    .clipped()
             }
             
 //            Text((integrityResult == .intact) ? "The surface is intact." : "The surface has integrity issues.")
@@ -76,12 +83,15 @@ struct IntegrityResultView: View {
                let integrityResults = integrityCalculator.getIntegrityResults(arResources)
             {
                 self.integrityResults = integrityResults
-                self.meshOverlayImage = createMeshOverlayImage(
+                let meshOverlayImage = createMeshOverlayImage(
                     arResources: arResources,
                     integrityResults: integrityResults,
                     stroke: 3.0,
                     color: .red
                 )
+                let cameraImage = alignImage(ciImage: arResources.cameraImage, orientation: arResources.orientation)
+                self.cameraUIImage = renderToUIImage(cameraImage ?? CIImage())
+                self.meshOverlayUIImage = alignImage(uiImage: meshOverlayImage, orientation: arResources.orientation)
             }
         }
     }
@@ -186,6 +196,46 @@ struct IntegrityResultView: View {
     
     private func validatePoint(_ point: CGPoint, in size: CGSize) -> Bool {
         return point.x >= 0 && point.x <= size.width && point.y >= 0 && point.y <= size.height
+    }
+    
+    // MARK: Temp function, later to be refactored to work well with the actual model output constraints
+    private func centerSquareCrop(ciImage: CIImage) -> CIImage? {
+        let e = ciImage.extent // in pixel coordinates, origin at bottom-left
+        let side = min(e.width, e.height)
+        let dx = (e.width  - side) / 2.0
+        let dy = (e.height - side) / 2.0
+        let cropRect = CGRect(x: e.origin.x + dx, y: e.origin.y + dy, width: side, height: side)
+        // cropped(to:) is lazy until rendered—very cheap
+        return ciImage.cropped(to: cropRect)
+    }
+    
+    func renderToUIImage(_ ciImage: CIImage) -> UIImage? {
+        guard let cgImage = sharedCIContext.createCGImage(ciImage, from: ciImage.extent) else { return nil }
+        return UIImage(cgImage: cgImage, scale: 1, orientation: .up)
+    }
+    
+    private func alignImage(
+        ciImage: CIImage?, orientation: CGImagePropertyOrientation
+    ) -> CIImage? {
+        guard let ciImage = ciImage else { return nil }
+        let orientedImage = ciImage.oriented(orientation)
+        let centerCroppedImage = centerSquareCrop(ciImage: orientedImage)
+        print("Oriented size: \(String(describing: centerCroppedImage?.extent))")
+        return centerCroppedImage
+    }
+    
+    private func alignImage(
+        uiImage: UIImage?, orientation: CGImagePropertyOrientation
+    ) -> UIImage? {
+        var image: CIImage? = nil
+        if let uiImage = uiImage {
+            image = CIImage(image: uiImage)
+        }
+        let alignedImage = alignImage(ciImage: image, orientation: orientation)
+        if let alignedImage = alignedImage {
+            return renderToUIImage(alignedImage)
+        }
+        return nil
     }
     
     private func imageOriented(_ image: UIImage, to orientation: CGImagePropertyOrientation) -> UIImage? {
