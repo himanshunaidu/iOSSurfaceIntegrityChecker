@@ -13,7 +13,7 @@ struct Plane {
     var d: Float      // Offset from origin
 }
 
-class PlaneFit {    
+class PlaneFit {
     /**
      Fit a plane to a set of 3D points using PCA.
      This algorithm is used for fitting a plane for a polygon mesh.

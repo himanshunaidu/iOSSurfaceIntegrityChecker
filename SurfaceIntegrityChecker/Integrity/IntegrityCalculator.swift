@@ -23,6 +23,10 @@ enum IntegrityStatus: CaseIterable, Identifiable, CustomStringConvertible {
         }
     }
 }
+struct IntegrityStatusDetails {
+    var status: IntegrityStatus
+    var details: String
+}
 
 struct IntegrityResults {
     var triangles: [(SIMD3<Float>, SIMD3<Float>, SIMD3<Float>)] = []
@@ -31,6 +35,10 @@ struct IntegrityResults {
     var integrityStatus: IntegrityStatus = .intact
     
     var triangleColors: [UIColor] = []
+    
+    var meshIntegrityStatusDetails: IntegrityStatusDetails = IntegrityStatusDetails(status: .intact, details: "")
+    var boundingBoxIntegrityStatusDetails: IntegrityStatusDetails = IntegrityStatusDetails(status: .intact, details: "")
+    var boundingBoxMeshIntegrityStatusDetails: IntegrityStatusDetails = IntegrityStatusDetails(status: .intact, details: "")
 }
 
 class IntegrityCalculator {
@@ -38,6 +46,9 @@ class IntegrityCalculator {
     private var planeFit: PlaneFit = PlaneFit()
     
     private var meshPlaneAngularDeviationThreshold: Float = 5.0 // degrees
+    private var meshPlaneDeviantTriangleAreaPercentageThreshold: Float = 0.05 // 5%
+    private var boundingBoxAreaThreshold: Float = 0.1 // m²
+    private var boundingBoxMeshAngularStdThreshold: Float = 0.1 // radians
     
     func getIntegrityResults(_ arResources: MeshBundle) -> IntegrityResults? {
         guard let segmentationLabelImage = arResources.segmentationLabelImage,
@@ -148,18 +159,21 @@ class IntegrityCalculator {
         
 //        guard !triangleNormals.isEmpty else { return nil }
         var triangleColors: [UIColor] = triangles.map { _ in UIColor(red: 0.957, green: 0.137, blue: 0.910, alpha: 0.9) }
-        getMeshIntegrity(triangles, triangleColors: &triangleColors)
+        let meshIntegrityDetails = getMeshIntegrity(triangles, triangleColors: &triangleColors)
+        var boundingBoxIntegrityDetails: IntegrityStatusDetails? = nil
+        var boundingBoxMeshIntegrityDetails: IntegrityStatusDetails? = nil
         if let damageDetectionResults = arResources.damageDetectionResults {
-            let (boundingBoxTriangleIndices, boundingBoxMeshAreas) = getBoundingBoxIntegrity(
+            let (boundingBoxTriangleIndices, boundingBoxMeshAreas, boundingBoxIntegrityDetailsWrapped) = getBoundingBoxIntegrity(
                 points, triangles: triangles, damageDetectionResults: damageDetectionResults, triangleColors: &triangleColors
             )
-            getBoundingBoxMeshIntegrity(
+            boundingBoxMeshIntegrityDetails = getBoundingBoxMeshIntegrity(
                 triangles,
                 boundingBoxTriangleIndices: boundingBoxTriangleIndices,
                 boundingBoxMeshAreas: boundingBoxMeshAreas,
                 damageDetectionResults: damageDetectionResults,
                 triangleColors: &triangleColors
             )
+            boundingBoxIntegrityDetails = boundingBoxIntegrityDetailsWrapped
         }
         
         return IntegrityResults(
@@ -167,13 +181,18 @@ class IntegrityCalculator {
             triangleNormals: triangleNormals,
             points: points,
             integrityStatus: .intact,
-            triangleColors: triangleColors
+            triangleColors: triangleColors,
+            meshIntegrityStatusDetails: meshIntegrityDetails ?? IntegrityStatusDetails(status: .intact, details: ""),
+            boundingBoxIntegrityStatusDetails: boundingBoxIntegrityDetails ?? IntegrityStatusDetails(status: .intact, details: ""),
+            boundingBoxMeshIntegrityStatusDetails: boundingBoxMeshIntegrityDetails ?? IntegrityStatusDetails(status: .intact, details: "")
         )
     }
     
-    func getMeshIntegrity(_ triangles: [(SIMD3<Float>, SIMD3<Float>, SIMD3<Float>)], triangleColors: inout [UIColor]) -> Void {
+    func getMeshIntegrity(_ triangles: [(SIMD3<Float>, SIMD3<Float>, SIMD3<Float>)], triangleColors: inout [UIColor]) -> IntegrityStatusDetails? {
         var trianglePoints: [SIMD3<Float>] = []
-        var triangleWeights: [Float] = []
+        var triangleAreas: [Float] = []
+        var deviantArea: Float = 0.0
+        var totalArea: Float = 0.0
         
         for (_, triangle) in triangles.enumerated() {
             let (v0, v1, v2) = triangle
@@ -181,15 +200,15 @@ class IntegrityCalculator {
             trianglePoints.append(centroid)
             
             let area = length(cross(v1 - v0, v2 - v0)) / 2.0
-            triangleWeights.append(area)
+            triangleAreas.append(area)
+            totalArea += area
         }
         
-        let plane: Plane? = planeFit.fitPlanePCA(trianglePoints, weights: triangleWeights)
+        let plane: Plane? = planeFit.fitPlanePCA(trianglePoints, weights: triangleAreas)
         guard let plane else {
             print("Failed to fit a plane to the triangle centroids.")
-            return
+            return nil
         }
-        print("Fitted plane: normal = \(plane.n), d = \(plane.d)")
         
         var angularDeviations: [Float] = []
         for (index, triangle) in triangles.enumerated() {
@@ -210,22 +229,33 @@ class IntegrityCalculator {
             if angleDeg > meshPlaneAngularDeviationThreshold {
 //                print("Deviation of triangle \(index) is \(angleDeg)°")
                 triangleColors[index] = UIColor(red: 1.0, green: 0, blue: 0, alpha: 0.9)
+                deviantArea += triangleAreas[index]
             }
         }
+        
+        let deviantAreaPercentage = deviantArea / totalArea
+        let status = deviantAreaPercentage > meshPlaneDeviantTriangleAreaPercentageThreshold
+        let details: String = "Deviant area: \(String(format: "%.2f", deviantArea)) m²/ Total area: \(String(format: "%.2f", totalArea)) m²"
+        return IntegrityStatusDetails(
+            status: status ? .compromised : .intact,
+            details: details
+        )
     }
     
     /**
-     
+     Also returns details for each bounding box:
+        - boundingBoxTriangleIndices: [boundingBoxIndex: [triangleIndices]]
+        - boundingBoxMeshAreas: [boundingBoxIndex: area]
      */
     func getBoundingBoxIntegrity(
         _ trianglePoints: [(CGPoint, CGPoint, CGPoint)],
         triangles: [(SIMD3<Float>, SIMD3<Float>, SIMD3<Float>)],
         damageDetectionResults: [DamageDetectionResult],
         triangleColors: inout [UIColor]
-    ) -> (boundingBoxTriangleIndices: [Int:[Int]], boundingBoxMeshAreas: [Int: Float]) {
+    ) -> (boundingBoxTriangleIndices: [Int:[Int]], boundingBoxMeshAreas: [Int: Float], integrityStatusDetails: IntegrityStatusDetails?) {
         if triangles.count != trianglePoints.count {
             print("Mismatch in number of triangles and triangle points.")
-            return ([:], [:])
+            return ([:], [:], nil)
         }
         let boundingBoxes = damageDetectionResults.map { $0.boundingBox }
         var boundingBoxMeshAreas: [Int: Float] = [:]
@@ -253,7 +283,21 @@ class IntegrityCalculator {
                 }
             }
         }
-        return (boundingBoxTriangleIndices, boundingBoxMeshAreas)
+        
+        var status: Bool = false
+        var numDeviantBoxes: Int = 0
+        for (bI, area) in boundingBoxMeshAreas {
+            if area > boundingBoxAreaThreshold {
+                status = true
+                numDeviantBoxes += 1
+            }
+        }
+        
+        let details = "Bounding Boxes: Total=\(boundingBoxes.count), Deviant=\(numDeviantBoxes) with area > \(boundingBoxAreaThreshold) m²"
+        return (boundingBoxTriangleIndices, boundingBoxMeshAreas, IntegrityStatusDetails(
+            status: status ? .compromised : .intact,
+            details: details
+        ))
     }
     
     func getBoundingBoxMeshIntegrity(
@@ -262,9 +306,9 @@ class IntegrityCalculator {
         boundingBoxMeshAreas: [Int: Float],
         damageDetectionResults: [DamageDetectionResult],
         triangleColors: inout [UIColor]
-    ) {
-        let boundingBoxMeshIntegrityResults: [Int: Bool] = [:]
-        
+    ) -> IntegrityStatusDetails? {
+        var status: Bool = false
+        var numDeviantBoxes: Int = 0
         for (bI, triangleIndices) in boundingBoxTriangleIndices {
             let boundingBox = damageDetectionResults[bI].boundingBox
             let meshArea = boundingBoxMeshAreas[bI, default: 0]
@@ -290,7 +334,17 @@ class IntegrityCalculator {
                     triangleColors[index] = UIColor(red: 0.0, green: 0.0, blue: 1.0, alpha: 0.9)
                 }
             }
+            
+            if triangleNormalStdDev > boundingBoxMeshAngularStdThreshold {
+                status = true
+                numDeviantBoxes += 1
+            }
         }
+        let details = "Bounding Boxes Mesh: Deviant=\(numDeviantBoxes) with angular std > \(String(format: "%.2f", boundingBoxMeshAngularStdThreshold)) radians"
+        return IntegrityStatusDetails(
+            status: status ? .compromised : .intact,
+            details: details
+        )
     }
     
     func calculateIntegrity(of meshBundle: MeshBundle) -> Bool {
