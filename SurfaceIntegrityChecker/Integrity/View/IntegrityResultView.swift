@@ -44,38 +44,70 @@ struct IntegrityResultView: View {
                 }
             }
             
-            TextField("Dataset Name", text: $datasetName)
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .padding()
-            if let error = datasetSaveError {
-                Text("Error: \(error)")
-                    .foregroundColor(.red)
-                    .padding()
-            }
-            if datasetSaveSuccess {
-                Text("Dataset saved successfully!")
-                    .foregroundColor(.green)
-                    .padding()
-            }
-            
-            Button("Save Result") {
-                // Action to save the result
-                if let arResources = arResources {
-                    let datasetName = datasetName.isEmpty ? UUID().uuidString : datasetName
-                    do {
-                        let datasetEncoder = try DatasetEncoder(rootDirectoryName: ROOT_DIRECTORY_NAME, directoryName: datasetName)
-                        try datasetEncoder.addData(frameString: UUID().uuidString, meshBundle: arResources)
-                    } catch {
-                        datasetSaveSuccess = false
-                        datasetSaveError = "Failed to save dataset: \(error)"
-                        print(datasetSaveError!)
-                        return
-                    }
-                    datasetSaveSuccess = true
-                    datasetSaveError = nil
-                } else {
-                    print("No AR Resources available for saving.")
+            ScrollView {
+                VStack(spacing: 0) {
+                    Label("Mesh Integrity Status:", systemImage: "cube.box.fill")
+                    
+                    TextEditor(text: .constant(integrityResults.meshIntegrityStatusDetails.details))
+                        .foregroundColor(integrityResults.meshIntegrityStatusDetails.status == .compromised ? .red : .green)
+                        .padding()
+                        .frame(minHeight: 100)
+//                        .scrollDisabled(true)
                 }
+                
+                VStack(spacing: 0) {
+                    Label("Bounding Box Integrity Status:", systemImage: "cube.box.fill")
+                    
+                    TextEditor(text: .constant(integrityResults.boundingBoxIntegrityStatusDetails.details))
+                        .foregroundColor(integrityResults.boundingBoxIntegrityStatusDetails.status == .compromised ? .red : .green)
+                        .padding()
+                        .frame(minHeight: 100)
+//                        .scrollDisabled(true)
+                }
+                
+                VStack(spacing: 0) {
+                    Label("Bounding Box Mesh Integrity Status:", systemImage: "cube.box.fill")
+                    
+                    TextEditor(text: .constant(integrityResults.boundingBoxMeshIntegrityStatusDetails.details))
+                        .foregroundColor(integrityResults.boundingBoxMeshIntegrityStatusDetails.status == .compromised ? .red : .green)
+                        .padding()
+                        .frame(minHeight: 100)
+//                        .scrollDisabled(true)
+                }
+                
+//                TextField("Dataset Name", text: $datasetName)
+//                    .textFieldStyle(RoundedBorderTextFieldStyle())
+//                    .padding()
+//                if let error = datasetSaveError {
+//                    Text("Error: \(error)")
+//                        .foregroundColor(.red)
+//                        .padding()
+//                }
+//                if datasetSaveSuccess {
+//                    Text("Dataset saved successfully!")
+//                        .foregroundColor(.green)
+//                        .padding()
+//                }
+//                
+//                Button("Save Result") {
+//                    // Action to save the result
+//                    if let arResources = arResources {
+//                        let datasetName = datasetName.isEmpty ? UUID().uuidString : datasetName
+//                        do {
+//                            let datasetEncoder = try DatasetEncoder(rootDirectoryName: ROOT_DIRECTORY_NAME, directoryName: datasetName)
+//                            try datasetEncoder.addData(frameString: UUID().uuidString, meshBundle: arResources)
+//                        } catch {
+//                            datasetSaveSuccess = false
+//                            datasetSaveError = "Failed to save dataset: \(error)"
+//                            print(datasetSaveError!)
+//                            return
+//                        }
+//                        datasetSaveSuccess = true
+//                        datasetSaveError = nil
+//                    } else {
+//                        print("No AR Resources available for saving.")
+//                    }
+//                }
             }
         }
         .onAppear() {

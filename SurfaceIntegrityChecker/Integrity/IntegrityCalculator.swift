@@ -176,11 +176,24 @@ class IntegrityCalculator {
             boundingBoxIntegrityDetails = boundingBoxIntegrityDetailsWrapped
         }
         
+        var integrityStatus: IntegrityStatus = .intact
+        if let meshIntegrityDetails = meshIntegrityDetails,
+           meshIntegrityDetails.status == .compromised {
+            integrityStatus = .compromised
+        }
+        if let boundingBoxIntegrityDetails = boundingBoxIntegrityDetails,
+           boundingBoxIntegrityDetails.status == .compromised {
+            integrityStatus = .compromised
+        }
+        if let boundingBoxMeshIntegrityDetails = boundingBoxMeshIntegrityDetails,
+           boundingBoxMeshIntegrityDetails.status == .compromised {
+            integrityStatus = .compromised
+        }
         return IntegrityResults(
             triangles: triangles,
             triangleNormals: triangleNormals,
             points: points,
-            integrityStatus: .intact,
+            integrityStatus: integrityStatus,
             triangleColors: triangleColors,
             meshIntegrityStatusDetails: meshIntegrityDetails ?? IntegrityStatusDetails(status: .intact, details: ""),
             boundingBoxIntegrityStatusDetails: boundingBoxIntegrityDetails ?? IntegrityStatusDetails(status: .intact, details: ""),
