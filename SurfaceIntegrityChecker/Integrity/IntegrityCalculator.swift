@@ -150,7 +150,9 @@ class IntegrityCalculator {
         var triangleColors: [UIColor] = triangles.map { _ in UIColor(red: 0.957, green: 0.137, blue: 0.910, alpha: 0.9) }
         getMeshIntegrity(triangles, triangleColors: &triangleColors)
         if let damageDetectionResults = arResources.damageDetectionResults {
-            getBoundingBoxIntegrity(points, triangleColors: &triangleColors, damageDetectionResults: damageDetectionResults)
+            getBoundingBoxIntegrity(
+                points, triangles: triangles, damageDetectionResults: damageDetectionResults, triangleColors: &triangleColors
+            )
         }
         
         return IntegrityResults(
@@ -205,20 +207,73 @@ class IntegrityCalculator {
         }
     }
     
+    /**
+     
+     */
     func getBoundingBoxIntegrity(
-        _ trianglePoints: [(CGPoint, CGPoint, CGPoint)], triangleColors: inout [UIColor],
-        damageDetectionResults: [DamageDetectionResult]
-    ) {
+        _ trianglePoints: [(CGPoint, CGPoint, CGPoint)],
+        triangles: [(SIMD3<Float>, SIMD3<Float>, SIMD3<Float>)],
+        damageDetectionResults: [DamageDetectionResult],
+        triangleColors: inout [UIColor]
+    ) -> (boundingBoxTriangleIndices: [Int:[Int]], boundingBoxMeshAreas: [Int: Float]) {
+        if triangles.count != trianglePoints.count {
+            print("Mismatch in number of triangles and triangle points.")
+            return ([:], [:])
+        }
         let boundingBoxes = damageDetectionResults.map { $0.boundingBox }
+        var boundingBoxMeshAreas: [Int: Float] = [:]
+        var boundingBoxTriangleIndices: [Int:[Int]] = [:]
         
-        for (index, triangle) in trianglePoints.enumerated() {
-            let triangleVertices = [triangle.0, triangle.1, triangle.2].map { SIMD2<Float>(Float($0.x), Float($0.y)) }
+        var triangleAreas: [Float] = []
+        for (_, triangle) in triangles.enumerated() {
+            let (v0, v1, v2) = triangle
+            let area = length(cross(v1 - v0, v2 - v0)) / 2.0
+            triangleAreas.append(area)
+        }
+        
+        for (index, trianglePoint) in trianglePoints.enumerated() {
+            let triangle = triangles[index]
+            
+            let triangleVertices = [trianglePoint.0, trianglePoint.1, trianglePoint.2].map { SIMD2<Float>(Float($0.x), Float($0.y)) }
             let centroid = (triangleVertices[0] + triangleVertices[1] + triangleVertices[2]) / 3.0
             let centroidPoint = CGPoint(x: CGFloat(centroid.x), y: CGFloat(centroid.y))
             
-            if boundingBoxes.contains(where: { $0.contains(centroidPoint) }) {
-                triangleColors[index] = UIColor(red: 0.0, green: 0, blue: 1.0, alpha: 0.9)
+            for (bI, boundingBox) in boundingBoxes.enumerated() {
+                if boundingBox.contains(centroidPoint) {
+                    boundingBoxTriangleIndices[bI, default: []].append(index)
+                    boundingBoxMeshAreas[bI, default: 0] += triangleAreas[index]
+                    triangleColors[index] = UIColor(red: 0.0, green: 0, blue: 1.0, alpha: 0.9)
+                }
             }
+        }
+        return (boundingBoxTriangleIndices, boundingBoxMeshAreas)
+    }
+    
+    func getBoundingBoxMeshIntegrity(
+        _ triangles: [(SIMD3<Float>, SIMD3<Float>, SIMD3<Float>)],
+        boundingBoxTriangleIndices: [Int:[Int]],
+        boundingBoxMeshAreas: [Int: Float],
+        damageDetectionResults: [DamageDetectionResult],
+        triangleColors: inout [UIColor]
+    ) {
+        let boundingBoxMeshIntegrityResults: [Int: Bool] = [:]
+        
+        for (bI, triangleIndices) in boundingBoxTriangleIndices {
+            let boundingBox = damageDetectionResults[bI].boundingBox
+            let meshArea = boundingBoxMeshAreas[bI, default: 0]
+            
+            let triangleNormals: [SIMD3<Float>] = triangleIndices.map { index in
+                let (v0, v1, v2) = triangles[index]
+                let edge1 = v1 - v0
+                let edge2 = v2 - v0
+                let normal = normalize(cross(edge1, edge2))
+                return normal
+            }
+            let triangleNormalMean = triangleNormals.reduce(SIMD3<Float>(0,0,0), +) / Float(triangleNormals.count)
+            let triangleNormalVariance = triangleNormals.map {
+                length($0 - triangleNormalMean) * length($0 - triangleNormalMean)
+            }.reduce(0, +) / Float(triangleNormals.count)
+            print("Bounding box \(bI): Mesh area = \(meshArea), Triangle count = \(triangleIndices.count), Normal variance = \(triangleNormalVariance)")
         }
     }
     
