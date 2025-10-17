@@ -5,6 +5,7 @@
 //  Created by Himanshu on 10/13/25.
 //
 import SwiftUI
+import simd
 
 struct IntegrityResultView: View {
     var ROOT_DIRECTORY_NAME = "Experiment_4"
@@ -18,6 +19,7 @@ struct IntegrityResultView: View {
     
     @State var cameraUIImage: UIImage? = nil
     @State var meshOverlayUIImage: UIImage? = nil
+    @State var slope: Float = 0.0
     
     let sharedCIContext = CIContext(options: nil)
     
@@ -75,6 +77,17 @@ struct IntegrityResultView: View {
 //                        .scrollDisabled(true)
                 }
                 
+                if (self.slope != nil) {
+                    HStack {
+                        Label("Slope:", systemImage: "triangle.fill")
+                        
+                        TextEditor(text: .constant(String(format: "%.2f°", self.slope)))
+                            .foregroundColor(.primary)
+                            .padding()
+                            .frame(minHeight: 40)
+                    }
+                }
+                
 //                TextField("Dataset Name", text: $datasetName)
 //                    .textFieldStyle(RoundedBorderTextFieldStyle())
 //                    .padding()
@@ -124,6 +137,19 @@ struct IntegrityResultView: View {
                 let cameraImage = alignImage(ciImage: arResources.cameraImage, orientation: arResources.orientation)
                 self.cameraUIImage = renderToUIImage(cameraImage ?? CIImage())
                 self.meshOverlayUIImage = alignImage(uiImage: meshOverlayImage, orientation: arResources.orientation)
+                
+                if let plane = integrityResults.plane {
+                    let normal = plane.n
+                    let up = SIMD3<Float>(0, 1, 0)
+                    let dotProduct = simd_dot(normal, up)
+                    let magnitudeProduct = simd_length(normal) * simd_length(up)
+                    let angleRadians = acos(dotProduct / magnitudeProduct)
+                    var slope = angleRadians * (180.0 / .pi) // Convert to degrees
+                    if (slope > 90.0) {
+                        slope = 180.0 - slope
+                    }
+                    self.slope = slope
+                }
             }
         }
     }
