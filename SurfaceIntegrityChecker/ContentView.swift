@@ -68,7 +68,7 @@ struct ContentView: View {
             .sheet(isPresented: $showIntegritySheet, onDismiss: {
                 shouldCallResourceUpdateCallback = true
             }) {
-                IntegrityResultView(arResources: arResources)
+                IntegrityResultTempView(arResources: arResources)
             }
             .onChange(of: showIntegritySheet) { isPresented in
                 shouldCallResourceUpdateCallback = !isPresented

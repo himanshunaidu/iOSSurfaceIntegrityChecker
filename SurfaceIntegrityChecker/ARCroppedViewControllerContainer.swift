@@ -73,7 +73,7 @@ final class ARCroppedHostViewController: UIViewController, ARSessionDelegate {
         iv.contentMode = .scaleAspectFit
         iv.clipsToBounds = true
         iv.layer.cornerRadius = 12
-        iv.backgroundColor = UIColor(white: 0, alpha: 0.35)
+        iv.backgroundColor = UIColor(white: 0, alpha: 0.0)
         iv.isUserInteractionEnabled = false
         iv.translatesAutoresizingMaskIntoConstraints = false
         return iv
@@ -83,7 +83,7 @@ final class ARCroppedHostViewController: UIViewController, ARSessionDelegate {
         iv.contentMode = .scaleAspectFit
         iv.clipsToBounds = true
         iv.layer.cornerRadius = 12
-        iv.backgroundColor = UIColor(white: 0, alpha: 0.35)
+        iv.backgroundColor = UIColor(white: 0, alpha: 0.0)
         iv.isUserInteractionEnabled = false
         iv.translatesAutoresizingMaskIntoConstraints = false
         return iv
@@ -93,7 +93,7 @@ final class ARCroppedHostViewController: UIViewController, ARSessionDelegate {
         iv.contentMode = .scaleAspectFit
         iv.clipsToBounds = true
         iv.layer.cornerRadius = 12
-        iv.backgroundColor = UIColor(white: 0, alpha: 0.35)
+        iv.backgroundColor = UIColor(white: 0, alpha: 0.0)
         iv.isUserInteractionEnabled = false
         iv.translatesAutoresizingMaskIntoConstraints = false
         return iv
@@ -244,11 +244,11 @@ final class ARCroppedHostViewController: UIViewController, ARSessionDelegate {
         if showDebug {
 //            arView.debugOptions.insert(.showStatistics)
             arView.environment.sceneUnderstanding.options.insert(.occlusion)
-            arView.debugOptions.insert(.showSceneUnderstanding)
+//            arView.debugOptions.insert(.showSceneUnderstanding)
         } else {
 //            arView.debugOptions.remove(.showStatistics)
             arView.environment.sceneUnderstanding.options.remove(.occlusion)
-            arView.debugOptions.remove(.showSceneUnderstanding)
+//            arView.debugOptions.remove(.showSceneUnderstanding)
         }
     }
     
