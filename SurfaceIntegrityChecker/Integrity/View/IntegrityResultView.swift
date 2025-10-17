@@ -278,7 +278,6 @@ struct IntegrityResultView: View {
         guard let ciImage = ciImage else { return nil }
         let orientedImage = ciImage.oriented(orientation)
         let centerCroppedImage = centerSquareCrop(ciImage: orientedImage)
-        print("Oriented size: \(String(describing: centerCroppedImage?.extent))")
         return centerCroppedImage
     }
     
