@@ -39,6 +39,8 @@ struct IntegrityResults {
     var meshIntegrityStatusDetails: IntegrityStatusDetails = IntegrityStatusDetails(status: .intact, details: "")
     var boundingBoxIntegrityStatusDetails: IntegrityStatusDetails = IntegrityStatusDetails(status: .intact, details: "")
     var boundingBoxMeshIntegrityStatusDetails: IntegrityStatusDetails = IntegrityStatusDetails(status: .intact, details: "")
+    
+    var plane: Plane? = nil
 }
 
 class IntegrityCalculator {
@@ -159,7 +161,8 @@ class IntegrityCalculator {
         
 //        guard !triangleNormals.isEmpty else { return nil }
         var triangleColors: [UIColor] = triangles.map { _ in UIColor(red: 0.957, green: 0.137, blue: 0.910, alpha: 0.9) }
-        let meshIntegrityDetails = getMeshIntegrity(triangles, triangleColors: &triangleColors)
+        let meshIntegrityResults = getMeshIntegrity(triangles, triangleColors: &triangleColors)
+        let meshIntegrityDetails = meshIntegrityResults.integrityStatusDetails
         var boundingBoxIntegrityDetails: IntegrityStatusDetails? = nil
         var boundingBoxMeshIntegrityDetails: IntegrityStatusDetails? = nil
         if let damageDetectionResults = arResources.damageDetectionResults {
@@ -197,11 +200,12 @@ class IntegrityCalculator {
             triangleColors: triangleColors,
             meshIntegrityStatusDetails: meshIntegrityDetails ?? IntegrityStatusDetails(status: .intact, details: ""),
             boundingBoxIntegrityStatusDetails: boundingBoxIntegrityDetails ?? IntegrityStatusDetails(status: .intact, details: ""),
-            boundingBoxMeshIntegrityStatusDetails: boundingBoxMeshIntegrityDetails ?? IntegrityStatusDetails(status: .intact, details: "")
+            boundingBoxMeshIntegrityStatusDetails: boundingBoxMeshIntegrityDetails ?? IntegrityStatusDetails(status: .intact, details: ""),
+            plane: meshIntegrityResults.plane
         )
     }
     
-    func getMeshIntegrity(_ triangles: [(SIMD3<Float>, SIMD3<Float>, SIMD3<Float>)], triangleColors: inout [UIColor]) -> IntegrityStatusDetails? {
+    func getMeshIntegrity(_ triangles: [(SIMD3<Float>, SIMD3<Float>, SIMD3<Float>)], triangleColors: inout [UIColor]) -> (plane: Plane?, integrityStatusDetails: IntegrityStatusDetails?) {
         var trianglePoints: [SIMD3<Float>] = []
         var triangleAreas: [Float] = []
         var deviantArea: Float = 0.0
@@ -220,7 +224,7 @@ class IntegrityCalculator {
         let plane: Plane? = planeFit.fitPlanePCA(trianglePoints, weights: triangleAreas)
         guard let plane else {
             print("Failed to fit a plane to the triangle centroids.")
-            return nil
+            return (nil, nil)
         }
         
         var angularDeviations: [Float] = []
@@ -249,10 +253,11 @@ class IntegrityCalculator {
         let deviantAreaPercentage = deviantArea / totalArea
         let status = deviantAreaPercentage > meshPlaneDeviantTriangleAreaPercentageThreshold
         let details: String = "Deviant area: \(String(format: "%.2f", deviantArea)) m²/ Total area: \(String(format: "%.2f", totalArea)) m²"
-        return IntegrityStatusDetails(
+        let integrityStatusDetails = IntegrityStatusDetails(
             status: status ? .compromised : .intact,
             details: details
         )
+        return (plane, integrityStatusDetails)
     }
     
     /**

@@ -7,7 +7,7 @@
 import SwiftUI
 import simd
 
-struct IntegrityResultView: View {
+struct IntegrityResultTempView: View {
     var ROOT_DIRECTORY_NAME = "Experiment_4"
     
     @State var datasetName: String = ""
@@ -21,13 +21,38 @@ struct IntegrityResultView: View {
     @State var meshOverlayUIImage: UIImage? = nil
     @State var slope: Float = 0.0
     
+    @State var options: [AnnotationOption] = AnnotationOptionClass.allCases.map { .classOption($0) }
+    @State private var selectedOption: AnnotationOption = .classOption(.agree)
+    
+    @State var isShowingAnnotationInstanceDetailView: Bool = false
+    @State var selectedObjectId: UUID = UUID()
+    @State var selectedObjectWidth: Float = 1.5
+    @State var selectedObjectBreakage: Bool = true
+    @State var selectedObjectSlope: Float = 1.0
+    @State var selectedObjectCrossSlope: Float = 0.5
+    
+    @Environment(\.dismiss) var dismiss
+    
     let sharedCIContext = CIContext(options: nil)
     
     var body: some View {
         VStack {
-            Text("Surface Integrity Result")
-                .font(.title)
-                .padding()
+            HStack {
+                Spacer()
+                
+                Button(action: {
+                    dismiss()
+                }) {
+                    Image(systemName: "xmark")
+                        .font(.title)
+                }
+            }
+            .overlay(
+                Text("Surface Integrity Result")
+                    .font(.headline)
+                    .bold()
+            )
+            .padding()
             
             if (arResources != nil) {
                 HostedIntegrityResultImageViewController(cameraUIImage: $cameraUIImage, meshOverlayUIImage: $meshOverlayUIImage)
@@ -36,91 +61,57 @@ struct IntegrityResultView: View {
                     .clipped()
             }
             
-//            Text((integrityResult == .intact) ? "The surface is intact." : "The surface has integrity issues.")
-//                .font(.headline)
-//                .foregroundColor((integrityResult == .intact) ? .green : .red)
-//                .padding()
-            Picker("Status", selection: $integrityResults.integrityStatus) {
-                ForEach(IntegrityStatus.allCases) { option in
-                    Text(String(describing: option))
-                }
-            }
-            
-            ScrollView {
-                VStack(spacing: 0) {
-                    Label("Mesh Integrity Status:", systemImage: "cube.box.fill")
-                    
-                    TextEditor(text: .constant(integrityResults.meshIntegrityStatusDetails.details))
-                        .foregroundColor(integrityResults.meshIntegrityStatusDetails.status == .compromised ? .red : .green)
-                        .padding()
-                        .frame(minHeight: 100)
-//                        .scrollDisabled(true)
-                }
-                
-                VStack(spacing: 0) {
-                    Label("Bounding Box Integrity Status:", systemImage: "cube.box.fill")
-                    
-                    TextEditor(text: .constant(integrityResults.boundingBoxIntegrityStatusDetails.details))
-                        .foregroundColor(integrityResults.boundingBoxIntegrityStatusDetails.status == .compromised ? .red : .green)
-                        .padding()
-                        .frame(minHeight: 100)
-//                        .scrollDisabled(true)
-                }
-                
-                VStack(spacing: 0) {
-                    Label("Bounding Box Mesh Integrity Status:", systemImage: "cube.box.fill")
-                    
-                    TextEditor(text: .constant(integrityResults.boundingBoxMeshIntegrityStatusDetails.details))
-                        .foregroundColor(integrityResults.boundingBoxMeshIntegrityStatusDetails.status == .compromised ? .red : .green)
-                        .padding()
-                        .frame(minHeight: 100)
-//                        .scrollDisabled(true)
-                }
-                
-                if (self.slope != nil) {
-                    HStack {
-                        Label("Slope:", systemImage: "triangle.fill")
-                        
-                        TextEditor(text: .constant(String(format: "%.2f°", self.slope)))
-                            .foregroundColor(.primary)
-                            .padding()
-                            .frame(minHeight: 40)
+            VStack {
+                HStack {
+                    Spacer()
+                    Text("\(AnnotationViewConstants.Texts.selectedClassPrefixText): Sidewalk")
+                    Button(action: {
+                        isShowingAnnotationInstanceDetailView = true
+                    }) {
+                        Image(systemName: AnnotationViewConstants.Images.ellipsisIcon)
                     }
+                    .buttonStyle(.bordered)
+                    Spacer()
                 }
                 
-//                TextField("Dataset Name", text: $datasetName)
-//                    .textFieldStyle(RoundedBorderTextFieldStyle())
-//                    .padding()
-//                if let error = datasetSaveError {
-//                    Text("Error: \(error)")
-//                        .foregroundColor(.red)
-//                        .padding()
-//                }
-//                if datasetSaveSuccess {
-//                    Text("Dataset saved successfully!")
-//                        .foregroundColor(.green)
-//                        .padding()
-//                }
-//                
-//                Button("Save Result") {
-//                    // Action to save the result
-//                    if let arResources = arResources {
-//                        let datasetName = datasetName.isEmpty ? UUID().uuidString : datasetName
-//                        do {
-//                            let datasetEncoder = try DatasetEncoder(rootDirectoryName: ROOT_DIRECTORY_NAME, directoryName: datasetName)
-//                            try datasetEncoder.addData(frameString: UUID().uuidString, meshBundle: arResources)
-//                        } catch {
-//                            datasetSaveSuccess = false
-//                            datasetSaveError = "Failed to save dataset: \(error)"
-//                            print(datasetSaveError!)
-//                            return
-//                        }
-//                        datasetSaveSuccess = true
-//                        datasetSaveError = nil
-//                    } else {
-//                        print("No AR Resources available for saving.")
-//                    }
-//                }
+                ProgressBar(value: 0.5)
+                
+                HStack {
+                    Spacer()
+                    VStack(spacing: 10) {
+                        ForEach(options, id: \.self) { option in
+                            Button(action: {
+                                // Update the selected option
+//                                updateAnnotation(newOption: option)
+
+//                                    selectedOption = (selectedOption == option) ? nil : option
+                                
+//                                    if option == .misidentified {
+//                                        selectedClassIndex = index
+//                                        tempSelectedClassIndex = sharedImageData.segmentedIndices[index]
+//                                        isShowingClassSelectionModal = true
+//                                    }
+                            }) {
+                                Text(option.rawValue)
+                                    .font(.subheadline)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(selectedOption == option ? Color.blue : Color.gray)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(10)
+                            }
+                        }
+                    }
+                    Spacer()
+                }
+                .padding()
+                
+                Button(action: {
+                    dismiss()
+                }) {
+                    Text(false ? AnnotationViewConstants.Texts.finishText : AnnotationViewConstants.Texts.nextText)
+                }
+                .padding()
             }
         }
         .onAppear() {
@@ -151,6 +142,15 @@ struct IntegrityResultView: View {
                     self.slope = slope
                 }
             }
+        }
+        .sheet(isPresented: $isShowingAnnotationInstanceDetailView) {
+            AnnotationInstanceDetailView(
+                selectedObjectId: selectedObjectId,
+                selectedObjectWidth: $selectedObjectWidth,
+                selectedObjectBreakage: $selectedObjectBreakage,
+                selectedObjectSlope: $selectedObjectSlope,
+                selectedObjectCrossSlope: $selectedObjectCrossSlope
+            )
         }
     }
     
@@ -312,5 +312,16 @@ struct IntegrityResultView: View {
             cg.concatenate(t)
             cg.draw(cgimg, in: CGRect(origin: .zero, size: size))
         }
+    }
+}
+
+struct ProgressBar: View {
+    var value: Float
+
+
+    var body: some View {
+        ProgressView(value: value)
+            .progressViewStyle(LinearProgressViewStyle())
+            .padding()
     }
 }

@@ -77,7 +77,7 @@ final class DamageDetectionFrameProcessor: ObservableObject {
             height: CGFloat(DamageDetectionConfig.inputHeight)
         )
         var cameraImage = cIImage.oriented(orientation)
-        cameraImage = CIImageUtils.centerCrop(cameraImage, to: croppedSize)
+        cameraImage = CIImageUtils.centerCropAspectFit(cameraImage, to: croppedSize)
         let renderedCameraPixelBuffer = renderCIImageToPixelBuffer(
             cameraImage,
             size: croppedSize,
@@ -111,7 +111,7 @@ final class DamageDetectionFrameProcessor: ObservableObject {
         var damageDetectionResultCIImage: CIImage = CIImage(cgImage: damageDetectionResultImageUnwrapped)
         let inverse = orientation.inverted
         damageDetectionResultCIImage = damageDetectionResultCIImage.oriented(inverse)
-        let damageDetectionImage = CIImageUtils.revertCenterCrop(
+        let damageDetectionImage = CIImageUtils.revertCenterCropAspectFit(
             damageDetectionResultCIImage,
             originalSize: originalSize)
 //        damageDetectionImage = backCIImageToPixelBuffer(damageDetectionImage)
