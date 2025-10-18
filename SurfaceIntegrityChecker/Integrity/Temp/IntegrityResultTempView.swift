@@ -24,6 +24,15 @@ struct IntegrityResultTempView: View {
     @State var options: [AnnotationOption] = AnnotationOptionClass.allCases.map { .classOption($0) }
     @State private var selectedOption: AnnotationOption = .classOption(.agree)
     
+    @State var isShowingAnnotationInstanceDetailView: Bool = false
+    @State var selectedObjectId: UUID = UUID()
+    @State var selectedObjectWidth: Float = 1.5
+    @State var selectedObjectBreakage: Bool = true
+    @State var selectedObjectSlope: Float = 1.0
+    @State var selectedObjectCrossSlope: Float = 0.5
+    
+    @Environment(\.dismiss) var dismiss
+    
     let sharedCIContext = CIContext(options: nil)
     
     var body: some View {
@@ -43,18 +52,14 @@ struct IntegrityResultTempView: View {
                 HStack {
                     Spacer()
                     Text("\(AnnotationViewConstants.Texts.selectedClassPrefixText): Sidewalk")
+                    Button(action: {
+                        isShowingAnnotationInstanceDetailView = true
+                    }) {
+                        Image(systemName: AnnotationViewConstants.Images.ellipsisIcon)
+                    }
+                    .buttonStyle(.bordered)
                     Spacer()
                 }
-                
-//                HStack {
-//                    Picker(AnnotationViewConstants.Texts.selectObjectText, selection: $annotationImageManager.selectedObjectId) {
-//                        ForEach(annotationImageManager.annotatedDetectedObjects ?? [], id: \.id) { object in
-//                            Text(object.label ?? "")
-//                                .tag(object.id)
-//                        }
-//                    }
-////                    openAnnotationInstanceDetailView()
-//                }
                 
                 ProgressBar(value: 0.5)
                 
@@ -89,7 +94,7 @@ struct IntegrityResultTempView: View {
                 .padding()
                 
                 Button(action: {
-                    
+                    dismiss()
                 }) {
                     Text(false ? AnnotationViewConstants.Texts.finishText : AnnotationViewConstants.Texts.nextText)
                 }
@@ -124,6 +129,15 @@ struct IntegrityResultTempView: View {
                     self.slope = slope
                 }
             }
+        }
+        .sheet(isPresented: $isShowingAnnotationInstanceDetailView) {
+            AnnotationInstanceDetailView(
+                selectedObjectId: selectedObjectId,
+                selectedObjectWidth: $selectedObjectWidth,
+                selectedObjectBreakage: $selectedObjectBreakage,
+                selectedObjectSlope: $selectedObjectSlope,
+                selectedObjectCrossSlope: $selectedObjectCrossSlope
+            )
         }
     }
     
