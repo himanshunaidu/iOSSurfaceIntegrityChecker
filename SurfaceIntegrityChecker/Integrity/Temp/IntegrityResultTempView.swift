@@ -37,9 +37,22 @@ struct IntegrityResultTempView: View {
     
     var body: some View {
         VStack {
-            Text("Surface Integrity Result")
-                .font(.title)
-                .padding()
+            HStack {
+                Spacer()
+                
+                Button(action: {
+                    dismiss()
+                }) {
+                    Image(systemName: "xmark")
+                        .font(.title)
+                }
+            }
+            .overlay(
+                Text("Surface Integrity Result")
+                    .font(.headline)
+                    .bold()
+            )
+            .padding()
             
             if (arResources != nil) {
                 HostedIntegrityResultImageViewController(cameraUIImage: $cameraUIImage, meshOverlayUIImage: $meshOverlayUIImage)
