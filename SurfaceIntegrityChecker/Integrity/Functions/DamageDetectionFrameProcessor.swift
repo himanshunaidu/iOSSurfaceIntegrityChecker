@@ -97,12 +97,11 @@ final class DamageDetectionFrameProcessor: ObservableObject {
             alignedResult.boundingBox = alignBoundingBox(result.boundingBox, orientation: orientation, imageSize: croppedSize, originalSize: originalSize)
             return alignedResult
         }
-        alignedDamageDetectionResults.append(DamageDetectionResult(
-            boundingBox: CGRect(x: 0, y: originalSize.height/2, width: originalSize.width/2, height: originalSize.height/2),
-            confidence: 1.0,
-            label: "Container"
-        ))
-            
+//        alignedDamageDetectionResults.append(DamageDetectionResult(
+//            boundingBox: CGRect(x: 0, y: originalSize.height/2, width: originalSize.width/2, height: originalSize.height/2),
+//            confidence: 1.0,
+//            label: "Container"
+//        ))
         
         let damageDetectionResultImage = DetectedObjectRasterizer.rasterizeContourObjects(objects: damageDetectionResults, size: croppedSize)
         guard let damageDetectionResultImageUnwrapped = damageDetectionResultImage else {

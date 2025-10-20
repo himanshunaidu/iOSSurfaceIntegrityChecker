@@ -47,7 +47,7 @@ class IntegrityCalculator {
     private var connectedComponentsCalculator: ConnectedComponents = ConnectedComponents()
     private var planeFit: PlaneFit = PlaneFit()
     
-    private var meshPlaneAngularDeviationThreshold: Float = 5.0 // degrees
+    private var meshPlaneAngularDeviationThreshold: Float = 7.5 // degrees
     private var meshPlaneDeviantTriangleAreaPercentageThreshold: Float = 0.05 // 5%
     private var boundingBoxAreaThreshold: Float = 0.1 // m²
     private var boundingBoxMeshAngularStdThreshold: Float = 0.1 // radians
