@@ -640,14 +640,14 @@ final class ARCroppedHostViewController: UIViewController, ARSessionDelegate {
 //                print("Deviant Triangles Count: \(deviantTriangles.count)")
         
         // Step 4: Visualize
-        if let normalEntity = createHorizontalMeshEntity(triangles: normalTriangles, color: UIColor(red: 0.957, green: 0.137, blue: 0.910, alpha: 0.9), name: "GreenMesh") {
+        if let normalEntity = createHorizontalMeshEntity(triangles: normalTriangles, color: UIColor(red: 0.957, green: 0.137, blue: 0.910, alpha: 0.7), name: "GreenMesh") {
 //                    let anchorEntity = AnchorEntity(world: .zero)
 //                    anchorEntity.addChild(normalEntity)
 //                    arView?.scene.addAnchor(anchorEntity)
             floorBundle?.greenEntity.model = normalEntity.model
         }
 
-        if let deviantEntity = createHorizontalMeshEntity(triangles: deviantTriangles, color: .red,
+        if let deviantEntity = createHorizontalMeshEntity(triangles: deviantTriangles, color: UIColor(red: 1.0, green: 0.0, blue: 0.0, alpha: 0.7),
             name: "RedMesh") {
 //                    let anchorEntity = AnchorEntity(world: .zero)
 //                    anchorEntity.addChild(deviantEntity)
@@ -682,7 +682,7 @@ final class ARCroppedHostViewController: UIViewController, ARSessionDelegate {
     func createHorizontalMeshEntity(
         triangles: [(SIMD3<Float>, SIMD3<Float>, SIMD3<Float>)],
         color: UIColor = .green,
-        opacity: Float = 0.4,
+        opacity: Float = 0.85,
         name: String = "HorizontalMesh"
     ) -> ModelEntity? {
         if (triangles.isEmpty) {
@@ -709,6 +709,7 @@ final class ARCroppedHostViewController: UIViewController, ARSessionDelegate {
 
         var material = UnlitMaterial(color: color.withAlphaComponent(CGFloat(opacity)))
         material.triangleFillMode = .fill
+        material.blending = .transparent(opacity: 0.999)
         let entity = ModelEntity(mesh: mesh, materials: [material])
         return entity
     }

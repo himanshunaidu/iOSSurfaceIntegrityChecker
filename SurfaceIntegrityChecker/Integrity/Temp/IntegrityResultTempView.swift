@@ -224,6 +224,7 @@ struct IntegrityResultTempView: View {
             }
             
             cg.setStrokeColor(triangleColors[index % triangleColors.count].cgColor)
+//            cg.setAlpha(0.7)
             
             cg.beginPath()
             cg.move(to: triangle.0)
