@@ -8,7 +8,8 @@ import CoreImage
 
 extension SegmentationConfig {
     static let cocoCustom11Config: SegmentationClassConfig = SegmentationClassConfig(
-        modelURL: Bundle.main.url(forResource: "bisenetv2_11_640_640", withExtension: "mlmodelc"),
+//        modelURL: Bundle.main.url(forResource: "bisenetv2_11_640_640", withExtension: "mlmodelc"),
+        modelURL: Bundle.main.url(forResource: "bisenetv2_11_640_640_model_final_lab_controlled", withExtension: "mlmodelc"),
         classes: [
 //            SegmentationClass(name: "Road", grayscaleValue: 0.0 / 255.0, labelValue: 0,
 //                              color: CIColor(red: 0.502, green: 0.251, blue: 0.502),

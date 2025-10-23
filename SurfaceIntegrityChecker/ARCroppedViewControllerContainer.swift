@@ -559,7 +559,7 @@ final class ARCroppedHostViewController: UIViewController, ARSessionDelegate {
                     let classification = ARMeshClassification(rawValue: classificationValue) ?? .none
                     
                     // We're interested in floor-like horizontal surfaces
-                    guard classification == .floor else { continue }
+//                    guard classification == .floor else { continue }
 //
                     let v0 = worldVertex(at: Int(face[0]), geometry: geometry, transform: transform)
                     let v1 = worldVertex(at: Int(face[1]), geometry: geometry, transform: transform)

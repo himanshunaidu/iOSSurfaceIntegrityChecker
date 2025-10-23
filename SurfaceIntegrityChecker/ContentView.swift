@@ -65,10 +65,10 @@ struct ContentView: View {
             .padding(.top, 16)
             .padding(.bottom, 16)
             
-            .fullScreenCover(isPresented: $showIntegritySheet, onDismiss: {
+            .sheet(isPresented: $showIntegritySheet, onDismiss: {
                 shouldCallResourceUpdateCallback = true
             }) {
-                IntegrityResultTempView(arResources: arResources)
+                IntegrityResultView(arResources: arResources)
             }
             .onChange(of: showIntegritySheet) { isPresented in
                 shouldCallResourceUpdateCallback = !isPresented

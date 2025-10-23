@@ -47,7 +47,7 @@ class IntegrityCalculator {
     private var connectedComponentsCalculator: ConnectedComponents = ConnectedComponents()
     private var planeFit: PlaneFit = PlaneFit()
     
-    private var meshPlaneAngularDeviationThreshold: Float = 5.0 // degrees
+    private var meshPlaneAngularDeviationThreshold: Float = 7.5 // degrees
     private var meshPlaneDeviantTriangleAreaPercentageThreshold: Float = 0.05 // 5%
     private var boundingBoxAreaThreshold: Float = 0.1 // m²
     private var boundingBoxMeshAngularStdThreshold: Float = 0.1 // radians
@@ -102,7 +102,7 @@ class IntegrityCalculator {
                     let classification = ARMeshClassification(rawValue: classificationValue) ?? .none
                     
                     // We're interested in floor-like horizontal surfaces
-                    guard classification == .floor else { continue }
+//                    guard classification == .floor else { continue }
                     //
                     let v0 = worldVertex(at: Int(face[0]), geometry: geometry, transform: transform)
                     let v1 = worldVertex(at: Int(face[1]), geometry: geometry, transform: transform)
@@ -252,7 +252,8 @@ class IntegrityCalculator {
         
         let deviantAreaPercentage = deviantArea / totalArea
         let status = deviantAreaPercentage > meshPlaneDeviantTriangleAreaPercentageThreshold
-        let details: String = "Deviant area: \(String(format: "%.2f", deviantArea)) m²/ Total area: \(String(format: "%.2f", totalArea)) m²"
+//        let details: String = "Deviant area: \(String(format: "%.2f", deviantArea)) m²/ Total area: \(String(format: "%.2f", totalArea)) m²"
+        let details: String = "Deviant \(String(format: "%.2f", deviantArea))/\(String(format: "%.2f", totalArea)) m²"
         let integrityStatusDetails = IntegrityStatusDetails(
             status: status ? .compromised : .intact,
             details: details
@@ -311,7 +312,8 @@ class IntegrityCalculator {
             }
         }
         
-        let details = "Bounding Boxes: Total=\(boundingBoxes.count), Deviant=\(numDeviantBoxes) with area > \(boundingBoxAreaThreshold) m²"
+//        let details = "Bounding Boxes: Total=\(boundingBoxes.count), Deviant=\(numDeviantBoxes) with area > \(boundingBoxAreaThreshold) m²"
+        let details = "\(numDeviantBoxes) with area>\(boundingBoxAreaThreshold)m²"
         return (boundingBoxTriangleIndices, boundingBoxMeshAreas, IntegrityStatusDetails(
             status: status ? .compromised : .intact,
             details: details
@@ -358,7 +360,8 @@ class IntegrityCalculator {
                 numDeviantBoxes += 1
             }
         }
-        let details = "Bounding Boxes Mesh: Deviant=\(numDeviantBoxes) with angular std > \(String(format: "%.2f", boundingBoxMeshAngularStdThreshold)) radians"
+//        let details = "Bounding Boxes Mesh: Deviant=\(numDeviantBoxes) with angular std > \(String(format: "%.2f", boundingBoxMeshAngularStdThreshold)) radians"
+        let details = "\(numDeviantBoxes) with std>\(String(format: "%.2f", boundingBoxMeshAngularStdThreshold)) rad"
         return IntegrityStatusDetails(
             status: status ? .compromised : .intact,
             details: details

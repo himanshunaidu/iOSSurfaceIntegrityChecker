@@ -13,7 +13,8 @@ import CoreVideo
 enum DamageDetectionConfig {
     static let inputWidth: Int = 640
     static let inputHeight: Int = 640
-    static let modelURL: URL = Bundle.main.url(forResource: "v8n_175_16_960", withExtension: "mlmodelc")!
+//    static let modelURL: URL = Bundle.main.url(forResource: "v8n_175_16_960", withExtension: "mlmodelc")!
+    static let modelURL: URL = Bundle.main.url(forResource: "v8n_175_16_960_lab_controlled", withExtension: "mlmodelc")!
 }
 
 enum DetectionProcessingError: Error, LocalizedError {
@@ -97,11 +98,11 @@ final class DamageDetectionFrameProcessor: ObservableObject {
             alignedResult.boundingBox = alignBoundingBox(result.boundingBox, orientation: orientation, imageSize: croppedSize, originalSize: originalSize)
             return alignedResult
         }
-        alignedDamageDetectionResults.append(DamageDetectionResult(
-            boundingBox: CGRect(x: 0, y: originalSize.height/2, width: originalSize.width/2, height: originalSize.height/2),
-            confidence: 1.0,
-            label: "Container"
-        ))
+//        alignedDamageDetectionResults.append(DamageDetectionResult(
+//            boundingBox: CGRect(x: 0, y: originalSize.height/2, width: originalSize.width/2, height: originalSize.height/2),
+//            confidence: 1.0,
+//            label: "Container"
+//        ))
             
         
         let damageDetectionResultImage = DetectedObjectRasterizer.rasterizeContourObjects(objects: damageDetectionResults, size: croppedSize)
